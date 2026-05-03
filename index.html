@@ -7,6 +7,392 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Shippori+Mincho+B1:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+:root {
+  --white:      #FFFFFF;
+  --bg:         #FAF6F0;
+  --bg-alt:     #F2EAD8;
+  --brown:      #8B6A4A;
+  --brown-dark: #5C3D1E;
+  --brown-lt:   #C4A882;
+  --ink:        #2A2018;
+  --ink-mid:    #6A5A48;
+  --ink-lt:     #A0907C;
+  --rule:       #E0D4C0;
+  --rule-lt:    #EDE5D6;
+  --red:        #B83325;
+  --teal:       #3D7A78;
+  --sage:       #5C8A6A;
+  --gold:       #9C7228;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+.top-rule { height: 3px; background: var(--brown); }
+.site-header { background: var(--white); border-bottom: 1px solid var(--rule); padding: 0 28px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; }
+.header-brand { display: flex; flex-direction: column; gap: 1px; }
+.header-brand-main { font-family: 'Shippori Mincho B1', serif; font-size: 16px; font-weight: 600; letter-spacing: 0.12em; color: var(--brown-dark); }
+.header-brand-sub { font-size: 9px; letter-spacing: 0.22em; color: var(--ink-lt); text-transform: uppercase; font-weight: 300; }
+.header-right { display: flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.1em; color: var(--ink-lt); text-transform: uppercase; }
+.live-dot { width: 5px; height: 5px; border-radius: 50%; background: #5BA35B; animation: pulse 2.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.hero { background: var(--bg-alt); border-bottom: 1px solid var(--rule); text-align: center; padding: 48px 24px 40px; }
+.hero-eyebrow { font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--brown); margin-bottom: 16px; font-weight: 400; }
+.hero-title { font-family: 'Shippori Mincho B1', serif; font-size: clamp(32px, 7vw, 52px); font-weight: 500; letter-spacing: 0.06em; color: var(--brown-dark); line-height: 1.1; margin-bottom: 8px; }
+.hero-title span { display: block; font-size: 0.45em; letter-spacing: 0.3em; color: var(--brown); font-weight: 400; margin-top: 6px; }
+.hero-caption { font-size: 12px; letter-spacing: 0.16em; color: var(--ink-lt); margin-top: 14px; }
+.hero-rule { width: 40px; height: 1px; background: var(--brown-lt); margin: 20px auto 0; }
+.cal-nav { background: var(--white); border-bottom: 1px solid var(--rule); display: flex; align-items: center; justify-content: space-between; padding: 14px 28px; }
+.nav-btn { background: none; border: 1px solid var(--rule); color: var(--ink-mid); font-family: 'Noto Sans JP', sans-serif; font-size: 12px; font-weight: 400; letter-spacing: 0.08em; padding: 7px 20px; cursor: pointer; transition: all 0.18s; }
+.nav-btn:hover { border-color: var(--brown); color: var(--brown); }
+.nav-month-wrap { text-align: center; }
+.nav-month-ja { font-family: 'Shippori Mincho B1', serif; font-size: clamp(16px, 4vw, 22px); font-weight: 500; letter-spacing: 0.08em; color: var(--ink); }
+.nav-month-en { display: block; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-lt); margin-top: 3px; font-weight: 300; }
+.filters-bar { background: var(--bg); border-bottom: 1px solid var(--rule-lt); padding: 0; }
+.filters { display: flex; gap: 0; padding: 0 24px; overflow-x: auto; scrollbar-width: none; max-width: 1040px; margin: 0 auto; }
+.filters::-webkit-scrollbar { display: none; }
+.filter-btn { white-space: nowrap; padding: 11px 16px; border: none; border-bottom: 2px solid transparent; background: none; font-family: 'Noto Sans JP', sans-serif; font-size: 11px; font-weight: 400; letter-spacing: 0.06em; cursor: pointer; color: var(--ink-lt); transition: all 0.18s; margin-bottom: -1px; }
+.filter-btn:hover { color: var(--brown); }
+.filter-btn.active { color: var(--brown-dark); border-bottom-color: var(--brown); font-weight: 500; }
+.calendar-wrap { padding: 0 20px 48px; max-width: 1040px; margin: 0 auto; }
+.weekday-header { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--ink); margin-top: 20px; }
+.weekday-header div { font-size: 10px; font-weight: 400; letter-spacing: 0.12em; text-align: center; padding: 9px 4px; color: var(--ink-mid); text-transform: uppercase; }
+.weekday-header div:first-child { color: var(--red); }
+.weekday-header div:last-child  { color: var(--teal); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); width: 100%; }
+.cal-cell { border-right: 1px solid var(--rule-lt); border-bottom: 1px solid var(--rule-lt); min-height: 108px; padding: 8px 9px 8px; cursor: pointer; transition: background 0.12s; background: var(--white); position: relative; min-width: 0; overflow: hidden; }
+.cal-cell:nth-child(7n) { border-right: none; }
+.cal-cell:hover { background: var(--bg); }
+.cal-cell.other-month { background: var(--bg); }
+.cal-cell.other-month .cell-date { color: var(--ink-lt); }
+.cal-cell.today { background: #FFF8F3; }
+.cal-cell.today .cell-date { color: var(--brown); font-weight: 700; }
+.cal-cell.sunday .cell-date { color: var(--red); }
+.cal-cell.saturday .cell-date { color: var(--teal); }
+.cal-cell.closed { background: repeating-linear-gradient(-45deg, transparent 0px, transparent 9px, rgba(0,0,0,.03) 9px, rgba(0,0,0,.03) 18px); }
+.cell-date { font-family: 'Shippori Mincho B1', serif; font-size: clamp(14px, 2.2vw, 19px); font-weight: 500; line-height: 1; margin-bottom: 7px; color: var(--ink); }
+.cell-events { display: flex; flex-direction: column; gap: 3px; width: 100%; min-width: 0; }
+.event-pill { font-family: 'Noto Sans JP', sans-serif; font-size: 10px; font-weight: 400; line-height: 1.35; padding: 1px 0 1px 6px; border-left: 2px solid currentColor; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; min-width: 0; max-width: 100%; display: block; }
+.event-pill.hula     { color: var(--red); }
+.event-pill.tahitian { color: #9B2D20; }
+.event-pill.yoga     { color: var(--sage); }
+.event-pill.music    { color: var(--teal); }
+.event-pill.workshop { color: var(--gold); }
+.event-pill.special  { color: var(--brown); }
+.event-pill.closed   { color: var(--ink-lt); }
+.event-pill.more     { color: var(--ink-lt); border-left-color: var(--rule); }
+@media (max-width: 600px) {
+  .cal-cell { min-height: 62px; padding: 5px 5px; }
+  .cell-date { font-size: 13px; }
+  .event-pill { display: none; }
+  .dot-row { display: flex; gap: 2px; flex-wrap: wrap; margin-top: 4px; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .dot.hula     { background: var(--red); }
+  .dot.tahitian { background: #9B2D20; }
+  .dot.yoga     { background: var(--sage); }
+  .dot.music    { background: var(--teal); }
+  .dot.workshop { background: var(--gold); }
+  .dot.special  { background: var(--brown); }
+  .dot.closed   { background: var(--rule); }
+}
+@media (min-width: 601px) { .dot-row { display: none; } }
+.footer-band { background: var(--bg-alt); border-top: 1px solid var(--rule); text-align: center; padding: 32px 24px; }
+.footer-band-title { font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--brown); margin-bottom: 10px; }
+.footer-band-link { display: inline-block; font-size: 13px; letter-spacing: 0.1em; color: var(--brown-dark); text-decoration: none; border-bottom: 1px solid var(--brown-lt); padding-bottom: 2px; transition: border-color 0.18s, color 0.18s; }
+.footer-band-link:hover { color: var(--brown); border-color: var(--brown); }
+.site-footer { background: var(--brown-dark); color: var(--brown-lt); text-align: center; padding: 20px 24px; font-size: 11px; letter-spacing: 0.12em; }
+.site-footer a { color: var(--brown-lt); text-decoration: none; opacity: 0.8; }
+.site-footer a:hover { opacity: 1; }
+.footer-sep { margin: 0 12px; opacity: 0.4; }
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(30,20,10,0.55); z-index: 200; align-items: center; justify-content: center; padding: 24px; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--white); max-width: 460px; width: 100%; max-height: 82vh; overflow-y: auto; position: relative; border-top: 3px solid var(--brown); }
+.modal-header { padding: 22px 24px 18px; border-bottom: 1px solid var(--rule-lt); }
+.modal-close { position: absolute; top: 16px; right: 18px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--ink-lt); line-height: 1; transition: color 0.15s; }
+.modal-close:hover { color: var(--ink); }
+.modal-date { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-lt); margin-bottom: 5px; }
+.modal-title { font-family: 'Shippori Mincho B1', serif; font-size: 18px; font-weight: 500; color: var(--ink); letter-spacing: 0.04em; }
+.modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; }
+.modal-event { padding: 13px 14px; border-left: 3px solid var(--rule); background: var(--bg); }
+.modal-event.hula     { border-color: var(--red); }
+.modal-event.tahitian { border-color: #9B2D20; }
+.modal-event.yoga     { border-color: var(--sage); }
+.modal-event.music    { border-color: var(--teal); }
+.modal-event.workshop { border-color: var(--gold); }
+.modal-event.special  { border-color: var(--brown); }
+.modal-event-label { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-lt); margin-bottom: 4px; font-weight: 400; }
+.modal-event-title { font-family: 'Shippori Mincho B1', serif; font-size: 15px; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+.modal-event-time { font-size: 12px; color: var(--ink-mid); letter-spacing: 0.04em; margin-bottom: 4px; }
+.modal-event-desc { font-size: 11px; color: var(--ink-lt); line-height: 1.7; white-space: pre-line; }
+.modal-empty { color: var(--ink-lt); font-size: 13px; text-align: center; padding: 28px 0; letter-spacing: 0.06em; }
+.loading-overlay { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 300; align-items: center; justify-content: center; flex-direction: column; gap: 14px; }
+.loading-overlay.show { display: flex; }
+.loading-text { font-size: 12px; letter-spacing: 0.12em; color: var(--ink-lt); }
+.spinner { width: 28px; height: 28px; border: 2px solid var(--rule); border-top-color: var(--brown); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="loading-overlay show" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">読み込み中...</div>
+</div>
+<div class="top-rule"></div>
+<header class="site-header">
+  <div class="header-brand">
+    <div class="header-brand-main">Tiki's Tokyo</div>
+    <div class="header-brand-sub">Event Calendar</div>
+  </div>
+  <div class="header-right">
+    <span class="live-dot"></span>
+    <span id="lastUpdated">--</span>
+  </div>
+</header>
+<div class="hero">
+  <div class="hero-eyebrow">Yoyogi Park · BE STAGE 1F</div>
+  <div class="hero-title">Events<span>TIKI'S TOKYO</span></div>
+  <div class="hero-caption">Always Aloha</div>
+  <div class="hero-rule"></div>
+</div>
+<div class="cal-nav">
+  <button class="nav-btn" id="prevBtn">← 前月</button>
+  <div class="nav-month-wrap">
+    <div class="nav-month-ja" id="navMonthJa"></div>
+    <span class="nav-month-en" id="navMonthEn"></span>
+  </div>
+  <button class="nav-btn" id="nextBtn">翌月 →</button>
+</div>
+<div class="filters-bar">
+  <div class="filters" id="filters">
+    <button class="filter-btn active" data-type="all">すべて</button>
+    <button class="filter-btn" data-type="hula">フラショー</button>
+    <button class="filter-btn" data-type="tahitian">タヒチアン</button>
+    <button class="filter-btn" data-type="workshop">ワークショップ</button>
+    <button class="filter-btn" data-type="music">ライブ</button>
+    <button class="filter-btn" data-type="yoga">ヨガ</button>
+    <button class="filter-btn" data-type="special">特別企画</button>
+  </div>
+</div>
+<div class="calendar-wrap">
+  <div class="weekday-header">
+    <div>Sun</div><div>Mon</div><div>Tue</div>
+    <div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+  </div>
+  <div class="cal-grid" id="calGrid"></div>
+</div>
+<div class="footer-band">
+  <div class="footer-band-title">Instagram</div>
+  <a class="footer-band-link" href="https://www.instagram.com/tikis.tokyo/" target="_blank" rel="noopener">@tikis.tokyo</a>
+</div>
+<footer class="site-footer">
+  Tiki's Tokyo
+  <span class="footer-sep">|</span>
+  代々木公園 BE STAGE 1F
+  <span class="footer-sep">|</span>
+  <a href="https://www.tikis.jp/" target="_blank" rel="noopener">tikis.jp</a>
+  <span class="footer-sep">|</span>
+  <span id="footerUpdated"></span>
+</footer>
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <button class="modal-close" onclick="closeModal()">×</button>
+      <div class="modal-date" id="modalDate"></div>
+      <div class="modal-title" id="modalTitle"></div>
+    </div>
+    <div class="modal-body" id="modalEvents"></div>
+  </div>
+</div>
+<script>
+const TYPE_META = {
+  hula:     { label: 'Hula Show'  },
+  tahitian: { label: 'Tahitian'   },
+  workshop: { label: 'Workshop'   },
+  music:    { label: 'Live Music' },
+  yoga:     { label: 'Yoga'       },
+  special:  { label: 'Special'    },
+  closed:   { label: 'Closed'     },
+};
+const MONTHS_JA = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS_JA   = ['日','月','火','水','木','金','土'];
+let allEvents = [];
+let activeFilter = 'all';
+let lastFetchedAt = null;
+const now = new Date();
+let currentYear  = now.getFullYear();
+let currentMonth = now.getMonth();
+renderNav();
+loadEvents();
+setInterval(loadEvents, 5 * 60 * 1000);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && lastFetchedAt) {
+    if (Date.now() - lastFetchedAt > 5 * 60 * 1000) loadEvents();
+  }
+});
+async function loadEvents() {
+  try {
+    const res = await fetch('/api/events');
+    if (!res.ok) throw new Error(res.statusText);
+    const data = await res.json();
+    allEvents = data.events || [];
+    lastFetchedAt = data.fetchedAt ? new Date(data.fetchedAt).getTime() : Date.now();
+    updateTimestamp();
+    renderCalendar();
+  } catch(e) {
+    console.error(e);
+    document.getElementById('lastUpdated').textContent = '取得失敗';
+    renderCalendar();
+  } finally {
+    document.getElementById('loadingOverlay').classList.remove('show');
+  }
+}
+function updateTimestamp() {
+  if (!lastFetchedAt) return;
+  const mins = Math.floor((Date.now() - lastFetchedAt) / 60000);
+  const label = mins === 0 ? 'LIVE' : `更新 ${mins}分前`;
+  document.getElementById('lastUpdated').textContent = label;
+  document.getElementById('footerUpdated').textContent = label;
+}
+setInterval(updateTimestamp, 60000);
+document.getElementById('prevBtn').onclick = () => {
+  if (--currentMonth < 0) { currentMonth = 11; currentYear--; }
+  renderNav(); renderCalendar();
+};
+document.getElementById('nextBtn').onclick = () => {
+  if (++currentMonth > 11) { currentMonth = 0; currentYear++; }
+  renderNav(); renderCalendar();
+};
+function renderNav() {
+  document.getElementById('navMonthJa').textContent = `${currentYear}年 ${MONTHS_JA[currentMonth]}`;
+  document.getElementById('navMonthEn').textContent = `${MONTHS_EN[currentMonth].toUpperCase()} ${currentYear}`;
+}
+document.getElementById('filters').onclick = e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeFilter = btn.dataset.type;
+  renderCalendar();
+};
+function eventsForDate(dateStr) {
+  return allEvents.filter(e => {
+    if (e.date !== dateStr) return false;
+    return activeFilter === 'all' || e.type === activeFilter;
+  });
+}
+function toDateStr(y, m, d) {
+  return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function renderCalendar() {
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  const firstDay    = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const prevDays    = new Date(currentYear, currentMonth, 0).getDate();
+  const todayStr    = toDateStr(now.getFullYear(), now.getMonth(), now.getDate());
+  for (let i = 0; i < firstDay; i++) {
+    const d  = prevDays - firstDay + 1 + i;
+    const pm = currentMonth === 0 ? 11 : currentMonth - 1;
+    const py = currentMonth === 0 ? currentYear - 1 : currentYear;
+    grid.appendChild(makeCell(d, toDateStr(py, pm, d), true));
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = toDateStr(currentYear, currentMonth, d);
+    grid.appendChild(makeCell(d, ds, false, ds === todayStr));
+  }
+  const trailing = (7 - ((firstDay + daysInMonth) % 7)) % 7;
+  for (let i = 1; i <= trailing; i++) {
+    const nm = currentMonth === 11 ? 0 : currentMonth + 1;
+    const ny = currentMonth === 11 ? currentYear + 1 : currentYear;
+    grid.appendChild(makeCell(i, toDateStr(ny, nm, i), true));
+  }
+}
+function makeCell(day, dateStr, otherMonth, isToday = false) {
+  const cell = document.createElement('div');
+  cell.className = 'cal-cell';
+  if (otherMonth) cell.classList.add('other-month');
+  if (isToday)    cell.classList.add('today');
+  const dow = new Date(dateStr + 'T00:00:00').getDay();
+  if (dow === 0) cell.classList.add('sunday');
+  if (dow === 6) cell.classList.add('saturday');
+  const events = eventsForDate(dateStr);
+  if (events.some(e => e.type === 'closed')) cell.classList.add('closed');
+  const dateEl = document.createElement('div');
+  dateEl.className = 'cell-date';
+  dateEl.textContent = day;
+  cell.appendChild(dateEl);
+  const pillsEl = document.createElement('div');
+  pillsEl.className = 'cell-events';
+  events.slice(0, 3).forEach(ev => {
+    const pill = document.createElement('div');
+    pill.className = `event-pill ${ev.type}`;
+    const t = ev.times && ev.times.length ? ev.times[0] + ' ' : '';
+    pill.textContent = t + ev.title;
+    pill.title = ev.title;
+    pillsEl.appendChild(pill);
+  });
+  if (events.length > 3) {
+    const more = document.createElement('div');
+    more.className = 'event-pill more';
+    more.textContent = `+${events.length - 3}件`;
+    pillsEl.appendChild(more);
+  }
+  cell.appendChild(pillsEl);
+  if (events.length > 0) {
+    const dotRow = document.createElement('div');
+    dotRow.className = 'dot-row';
+    events.slice(0, 5).forEach(ev => {
+      const dot = document.createElement('div');
+      dot.className = `dot ${ev.type}`;
+      dotRow.appendChild(dot);
+    });
+    cell.appendChild(dotRow);
+  }
+  cell.onclick = () => openModal(dateStr, events);
+  return cell;
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+function openModal(dateStr, events) {
+  const [y, m, d] = dateStr.split('-');
+  const dow = DAYS_JA[new Date(dateStr + 'T00:00:00').getDay()];
+  document.getElementById('modalDate').textContent = `${y}年${parseInt(m)}月${parseInt(d)}日（${dow}）`;
+  document.getElementById('modalTitle').textContent = events.length ? `${events.length}件のイベント` : '本日のご案内';
+  const body = document.getElementById('modalEvents');
+  body.innerHTML = '';
+  if (!events.length) {
+    body.innerHTML = '<div class="modal-empty">この日はイベントの予定はありません</div>';
+  } else {
+    events.forEach(ev => {
+      const el = document.createElement('div');
+      el.className = `modal-event ${ev.type}`;
+      const meta = TYPE_META[ev.type] || {};
+      const timeStr = ev.times && ev.times.length ? ev.times.map(t => t).join(' / ') : '';
+      el.innerHTML = `
+        ${meta.label ? `<div class="modal-event-label">${meta.label}</div>` : ''}
+        <div class="modal-event-title">${ev.title}</div>
+        ${timeStr ? `<div class="modal-event-time">${timeStr}</div>` : ''}
+        ${ev.description ? `<div class="modal-event-desc">${ev.description}</div>` : ''}
+      `;
+      body.appendChild(el);
+    });
+  }
+  document.getElementById('modalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Events — Tiki's Tokyo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Shippori+Mincho+B1:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
 /* ────────────────────────────────────────
    Design system — matching tikis.jp palette
    ──────────────────────────────────────── */
