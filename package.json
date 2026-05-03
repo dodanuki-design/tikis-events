@@ -1,0 +1,9 @@
+{
+  "name": "tikis-events",
+  "version": "1.0.0",
+  "description": "Tiki's Tokyo event calendar",
+  "dependencies": {
+    "node-ical": "^0.16.0",
+    "rrule": "^2.7.2"
+  }
+}
