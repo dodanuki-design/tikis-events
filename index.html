@@ -5,530 +5,658 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Events — Tiki's Tokyo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Shippori+Mincho+B1:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --coral: #C96B50;
-    --coral-light: #E8927A;
-    --teal: #2D6B6B;
-    --teal-light: #4A9494;
-    --cream: #F5EFE6;
-    --sand: #D4BC9A;
-    --amber: #B8860B;
-    --sage: #6B8C6B;
-    --dark: #1A1A1A;
-    --mid: #4A4A4A;
-    --light: #8A8A8A;
-    --hairline: #D8D0C4;
-    --bg: #FDFAF6;
-  }
+/* ────────────────────────────────────────
+   Design system — matching tikis.jp palette
+   ──────────────────────────────────────── */
+:root {
+  --white:      #FFFFFF;
+  --bg:         #FAF6F0;
+  --bg-alt:     #F2EAD8;
+  --brown:      #8B6A4A;   /* brand brown — matches tikis.jp nav/headings */
+  --brown-dark: #5C3D1E;
+  --brown-lt:   #C4A882;
+  --ink:        #2A2018;
+  --ink-mid:    #6A5A48;
+  --ink-lt:     #A0907C;
+  --rule:       #E0D4C0;
+  --rule-lt:    #EDE5D6;
+  --red:        #B83325;   /* used only for event accent — not background */
+  --teal:       #3D7A78;
+  --sage:       #5C8A6A;
+  --gold:       #9C7228;
+}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-  body {
-    font-family: 'Shippori Mincho B1', serif;
-    background: var(--bg);
-    color: var(--dark);
-    min-height: 100vh;
-  }
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
 
-  /* ── Header ── */
-  .site-header {
-    background: var(--dark);
-    color: var(--cream);
-    padding: 0 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 52px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  .site-header .brand {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 15px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-  }
-  .live-badge {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    color: var(--sand);
-  }
-  .live-dot {
-    width: 6px; height: 6px;
+/* ── Top accent line ── */
+.top-rule {
+  height: 3px;
+  background: var(--brown);
+}
+
+/* ── Site header ── */
+.site-header {
+  background: var(--white);
+  border-bottom: 1px solid var(--rule);
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.header-brand-main {
+  font-family: 'Shippori Mincho B1', serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--brown-dark);
+}
+.header-brand-sub {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: var(--ink-lt);
+  text-transform: uppercase;
+  font-weight: 300;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--ink-lt);
+  text-transform: uppercase;
+}
+.live-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: #5BA35B;
+  animation: pulse 2.5s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ── Hero ── */
+.hero {
+  background: var(--bg-alt);
+  border-bottom: 1px solid var(--rule);
+  text-align: center;
+  padding: 48px 24px 40px;
+}
+.hero-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--brown);
+  margin-bottom: 16px;
+  font-weight: 400;
+}
+.hero-title {
+  font-family: 'Shippori Mincho B1', serif;
+  font-size: clamp(32px, 7vw, 52px);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--brown-dark);
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+.hero-title span {
+  display: block;
+  font-size: 0.45em;
+  letter-spacing: 0.3em;
+  color: var(--brown);
+  font-weight: 400;
+  margin-top: 6px;
+}
+.hero-caption {
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: var(--ink-lt);
+  margin-top: 14px;
+}
+.hero-rule {
+  width: 40px;
+  height: 1px;
+  background: var(--brown-lt);
+  margin: 20px auto 0;
+}
+
+/* ── Nav ── */
+.cal-nav {
+  background: var(--white);
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 28px;
+}
+.nav-btn {
+  background: none;
+  border: 1px solid var(--rule);
+  color: var(--ink-mid);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  padding: 7px 20px;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.nav-btn:hover {
+  border-color: var(--brown);
+  color: var(--brown);
+}
+.nav-month-wrap {
+  text-align: center;
+}
+.nav-month-ja {
+  font-family: 'Shippori Mincho B1', serif;
+  font-size: clamp(16px, 4vw, 22px);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+.nav-month-en {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-lt);
+  margin-top: 3px;
+  font-weight: 300;
+}
+
+/* ── Filters ── */
+.filters-bar {
+  background: var(--bg);
+  border-bottom: 1px solid var(--rule-lt);
+  padding: 0;
+}
+.filters {
+  display: flex;
+  gap: 0;
+  padding: 0 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+.filters::-webkit-scrollbar { display: none; }
+.filter-btn {
+  white-space: nowrap;
+  padding: 11px 16px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  color: var(--ink-lt);
+  transition: all 0.18s;
+  margin-bottom: -1px;
+}
+.filter-btn:hover { color: var(--brown); }
+.filter-btn.active {
+  color: var(--brown-dark);
+  border-bottom-color: var(--brown);
+  font-weight: 500;
+}
+
+/* ── Calendar ── */
+.calendar-wrap {
+  padding: 0 20px 48px;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+.weekday-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-bottom: 1px solid var(--ink);
+  margin-top: 20px;
+}
+.weekday-header div {
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-align: center;
+  padding: 9px 4px;
+  color: var(--ink-mid);
+  text-transform: uppercase;
+}
+.weekday-header div:first-child { color: var(--red); }
+.weekday-header div:last-child  { color: var(--teal); }
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+.cal-cell {
+  border-right: 1px solid var(--rule-lt);
+  border-bottom: 1px solid var(--rule-lt);
+  min-height: 108px;
+  padding: 8px 9px 8px;
+  cursor: pointer;
+  transition: background 0.12s;
+  background: var(--white);
+  position: relative;
+}
+.cal-cell:nth-child(7n)  { border-right: none; }
+.cal-cell:hover          { background: var(--bg); }
+.cal-cell.other-month    { background: var(--bg); }
+.cal-cell.other-month .cell-date { color: var(--ink-lt); }
+.cal-cell.today          { background: #FFF8F3; }
+.cal-cell.today .cell-date {
+  color: var(--brown);
+  font-weight: 700;
+}
+.cal-cell.sunday .cell-date  { color: var(--red); }
+.cal-cell.saturday .cell-date{ color: var(--teal); }
+.cal-cell.closed {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0px, transparent 9px,
+    rgba(0,0,0,.03) 9px, rgba(0,0,0,.03) 18px
+  );
+}
+
+.cell-date {
+  font-family: 'Shippori Mincho B1', serif;
+  font-size: clamp(14px, 2.2vw, 19px);
+  font-weight: 500;
+  line-height: 1;
+  margin-bottom: 7px;
+  color: var(--ink);
+}
+.cell-events { display: flex; flex-direction: column; gap: 3px; }
+.event-pill {
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.35;
+  padding: 1px 0 1px 6px;
+  border-left: 2px solid currentColor;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.event-pill.hula     { color: var(--red); }
+.event-pill.tahitian { color: #9B2D20; }
+.event-pill.yoga     { color: var(--sage); }
+.event-pill.music    { color: var(--teal); }
+.event-pill.workshop { color: var(--gold); }
+.event-pill.special  { color: var(--brown); }
+.event-pill.closed   { color: var(--ink-lt); }
+.event-pill.more     { color: var(--ink-lt); border-left-color: var(--rule); }
+
+@media (max-width: 600px) {
+  .cal-cell { min-height: 62px; padding: 5px 5px; }
+  .cell-date { font-size: 13px; }
+  .event-pill { display: none; }
+  .dot-row { display: flex; gap: 2px; flex-wrap: wrap; margin-top: 4px; }
+  .dot {
+    width: 5px; height: 5px;
     border-radius: 50%;
-    background: #4CAF50;
-    animation: pulse 2s infinite;
+    flex-shrink: 0;
   }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
+  .dot.hula     { background: var(--red); }
+  .dot.tahitian { background: #9B2D20; }
+  .dot.yoga     { background: var(--sage); }
+  .dot.music    { background: var(--teal); }
+  .dot.workshop { background: var(--gold); }
+  .dot.special  { background: var(--brown); }
+  .dot.closed   { background: var(--rule); }
+}
+@media (min-width: 601px) { .dot-row { display: none; } }
 
-  /* ── Hero ── */
-  .hero {
-    text-align: center;
-    padding: 40px 24px 20px;
-    border-bottom: 1px solid var(--hairline);
-  }
-  .hero-month {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: clamp(13px, 3vw, 15px);
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--light);
-    margin-bottom: 6px;
-  }
-  .hero-title {
-    font-family: 'Shippori Mincho B1', serif;
-    font-size: clamp(28px, 7vw, 48px);
-    font-weight: 500;
-    letter-spacing: 0.05em;
-    color: var(--dark);
-    margin-bottom: 4px;
-  }
-  .hero-sub {
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-size: clamp(13px, 2.5vw, 16px);
-    color: var(--coral);
-    letter-spacing: 0.05em;
-  }
-  .wave {
-    margin: 20px auto 0;
-    display: block;
-  }
+/* ── Footer band ── */
+.footer-band {
+  background: var(--bg-alt);
+  border-top: 1px solid var(--rule);
+  text-align: center;
+  padding: 32px 24px;
+}
+.footer-band-title {
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--brown);
+  margin-bottom: 10px;
+}
+.footer-band-link {
+  display: inline-block;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: var(--brown-dark);
+  text-decoration: none;
+  border-bottom: 1px solid var(--brown-lt);
+  padding-bottom: 2px;
+  transition: border-color 0.18s, color 0.18s;
+}
+.footer-band-link:hover { color: var(--brown); border-color: var(--brown); }
 
-  /* ── Nav ── */
-  .cal-nav {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 24px;
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--hairline);
-  }
-  .nav-btn {
-    background: none;
-    border: 1px solid var(--hairline);
-    color: var(--mid);
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 16px;
-    padding: 6px 16px;
-    cursor: pointer;
-    letter-spacing: 0.05em;
-    transition: all 0.2s;
-  }
-  .nav-btn:hover { border-color: var(--coral); color: var(--coral); }
-  .nav-month {
-    font-family: 'Shippori Mincho B1', serif;
-    font-size: clamp(16px, 4vw, 20px);
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    min-width: 160px;
-    text-align: center;
-  }
-  .nav-month span {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 13px;
-    color: var(--light);
-    display: block;
-    letter-spacing: 0.1em;
-  }
+.site-footer {
+  background: var(--brown-dark);
+  color: var(--brown-lt);
+  text-align: center;
+  padding: 20px 24px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+.site-footer a {
+  color: var(--brown-lt);
+  text-decoration: none;
+  opacity: 0.8;
+}
+.site-footer a:hover { opacity: 1; }
+.footer-sep { margin: 0 12px; opacity: 0.4; }
 
-  /* ── Filters ── */
-  .filters {
-    display: flex;
-    gap: 8px;
-    padding: 12px 24px;
-    overflow-x: auto;
-    border-bottom: 1px solid var(--hairline);
-    scrollbar-width: none;
-  }
-  .filters::-webkit-scrollbar { display: none; }
-  .filter-btn {
-    white-space: nowrap;
-    padding: 5px 14px;
-    border: 1px solid var(--hairline);
-    background: none;
-    font-family: 'Shippori Mincho B1', serif;
-    font-size: 12px;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    color: var(--mid);
-    transition: all 0.2s;
-  }
-  .filter-btn.active { background: var(--dark); color: var(--cream); border-color: var(--dark); }
-  .filter-btn[data-type="hula"].active { background: var(--coral); border-color: var(--coral); }
-  .filter-btn[data-type="tahitian"].active { background: #B05040; border-color: #B05040; }
-  .filter-btn[data-type="yoga"].active { background: var(--sage); border-color: var(--sage); }
-  .filter-btn[data-type="music"].active { background: var(--teal); border-color: var(--teal); }
-  .filter-btn[data-type="workshop"].active { background: var(--amber); border-color: var(--amber); }
+/* ── Modal ── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(30,20,10,0.55);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--white);
+  max-width: 460px;
+  width: 100%;
+  max-height: 82vh;
+  overflow-y: auto;
+  position: relative;
+  border-top: 3px solid var(--brown);
+}
+.modal-header {
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--rule-lt);
+}
+.modal-close {
+  position: absolute; top: 16px; right: 18px;
+  background: none; border: none;
+  font-size: 20px; cursor: pointer;
+  color: var(--ink-lt); line-height: 1;
+  transition: color 0.15s;
+}
+.modal-close:hover { color: var(--ink); }
+.modal-date {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-lt);
+  margin-bottom: 5px;
+}
+.modal-title {
+  font-family: 'Shippori Mincho B1', serif;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+}
+.modal-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.modal-event {
+  padding: 13px 14px;
+  border-left: 3px solid var(--rule);
+  background: var(--bg);
+}
+.modal-event.hula     { border-color: var(--red); }
+.modal-event.tahitian { border-color: #9B2D20; }
+.modal-event.yoga     { border-color: var(--sage); }
+.modal-event.music    { border-color: var(--teal); }
+.modal-event.workshop { border-color: var(--gold); }
+.modal-event.special  { border-color: var(--brown); }
+.modal-event-label {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-lt);
+  margin-bottom: 4px;
+  font-weight: 400;
+}
+.modal-event-title {
+  font-family: 'Shippori Mincho B1', serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.modal-event-time {
+  font-size: 12px;
+  color: var(--ink-mid);
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.modal-event-desc {
+  font-size: 11px;
+  color: var(--ink-lt);
+  line-height: 1.7;
+  white-space: pre-line;
+}
+.modal-empty {
+  color: var(--ink-lt);
+  font-size: 13px;
+  text-align: center;
+  padding: 28px 0;
+  letter-spacing: 0.06em;
+}
 
-  /* ── Calendar Grid ── */
-  .calendar-wrap {
-    padding: 0 16px 40px;
-    max-width: 1000px;
-    margin: 0 auto;
-  }
-  .weekday-header {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    border-bottom: 2px solid var(--dark);
-    margin-top: 16px;
-  }
-  .weekday-header div {
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-size: 12px;
-    letter-spacing: 0.08em;
-    text-align: center;
-    padding: 8px 4px;
-    color: var(--mid);
-  }
-  .weekday-header div:first-child { color: var(--coral); }
-
-  .cal-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-  }
-  .cal-cell {
-    border-right: 1px solid var(--hairline);
-    border-bottom: 1px solid var(--hairline);
-    min-height: 110px;
-    padding: 6px 8px 8px;
-    cursor: pointer;
-    transition: background 0.15s;
-    position: relative;
-  }
-  .cal-cell:nth-child(7n) { border-right: none; }
-  .cal-cell:hover { background: #FAF6F0; }
-  .cal-cell.other-month { opacity: 0.35; }
-  .cal-cell.today { background: #FFF8F4; }
-  .cal-cell.today .cell-date { color: var(--coral); font-weight: 600; }
-  .cal-cell.sunday .cell-date { color: var(--coral); }
-  .cal-cell.saturday .cell-date { color: var(--teal); }
-  .cal-cell.closed { background: repeating-linear-gradient(135deg, transparent, transparent 6px, rgba(0,0,0,0.025) 6px, rgba(0,0,0,0.025) 12px); }
-  .cal-cell.featured { outline: 1.5px solid var(--amber); }
-
-  .cell-date {
-    font-family: 'Shippori Mincho B1', serif;
-    font-size: clamp(15px, 2.5vw, 20px);
-    font-weight: 500;
-    line-height: 1;
-    margin-bottom: 6px;
-  }
-  .cell-events { display: flex; flex-direction: column; gap: 3px; }
-  .event-pill {
-    font-family: 'Shippori Mincho B1', serif;
-    font-size: 10px;
-    line-height: 1.3;
-    padding: 1px 0;
-    border-left: 2px solid currentColor;
-    padding-left: 4px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .event-pill.hula     { color: var(--coral); }
-  .event-pill.tahitian { color: #B05040; }
-  .event-pill.yoga     { color: var(--sage); }
-  .event-pill.music    { color: var(--teal); }
-  .event-pill.workshop { color: var(--amber); }
-  .event-pill.special  { color: var(--dark); }
-  .event-pill.closed   { color: var(--light); font-style: italic; }
-  .event-pill.featured-pill { font-weight: 600; }
-
-  /* Mobile: dots instead of text */
-  @media (max-width: 600px) {
-    .cal-cell { min-height: 64px; padding: 4px 5px; }
-    .cell-date { font-size: 13px; }
-    .event-pill { display: none; }
-    .dot-row { display: flex; gap: 2px; flex-wrap: wrap; margin-top: 3px; }
-    .dot {
-      width: 5px; height: 5px;
-      border-radius: 50%;
-    }
-    .dot.hula     { background: var(--coral); }
-    .dot.tahitian { background: #B05040; }
-    .dot.yoga     { background: var(--sage); }
-    .dot.music    { background: var(--teal); }
-    .dot.workshop { background: var(--amber); }
-    .dot.special  { background: var(--dark); }
-    .dot.closed   { background: var(--hairline); }
-  }
-  @media (min-width: 601px) {
-    .dot-row { display: none; }
-  }
-
-  /* ── Modal ── */
-  .modal-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 200;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-  }
-  .modal-overlay.open { display: flex; }
-  .modal {
-    background: var(--bg);
-    max-width: 480px;
-    width: 100%;
-    max-height: 80vh;
-    overflow-y: auto;
-    padding: 28px;
-    position: relative;
-  }
-  .modal-close {
-    position: absolute; top: 16px; right: 16px;
-    background: none; border: none;
-    font-size: 20px; cursor: pointer;
-    color: var(--mid); line-height: 1;
-  }
-  .modal-date {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 13px;
-    letter-spacing: 0.1em;
-    color: var(--light);
-    margin-bottom: 4px;
-  }
-  .modal-title {
-    font-family: 'Shippori Mincho B1', serif;
-    font-size: 22px;
-    font-weight: 500;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--hairline);
-  }
-  .modal-events { display: flex; flex-direction: column; gap: 16px; }
-  .modal-event {
-    padding: 12px 16px;
-    border-left: 3px solid var(--hairline);
-  }
-  .modal-event.hula     { border-color: var(--coral); }
-  .modal-event.tahitian { border-color: #B05040; }
-  .modal-event.yoga     { border-color: var(--sage); }
-  .modal-event.music    { border-color: var(--teal); }
-  .modal-event.workshop { border-color: var(--amber); }
-  .modal-event.special  { border-color: var(--dark); }
-  .modal-event.featured { background: #FFF9ED; border-color: var(--amber); }
-  .modal-event-title {
-    font-family: 'Shippori Mincho B1', serif;
-    font-size: 15px;
-    font-weight: 500;
-    margin-bottom: 4px;
-  }
-  .modal-event-time {
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-size: 14px;
-    color: var(--mid);
-    margin-bottom: 4px;
-  }
-  .modal-event-desc {
-    font-size: 12px;
-    color: var(--light);
-    line-height: 1.6;
-    white-space: pre-line;
-  }
-  .modal-empty {
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    color: var(--light);
-    text-align: center;
-    padding: 20px 0;
-  }
-
-  /* ── Footer info ── */
-  .cal-footer {
-    text-align: center;
-    padding: 24px;
-    border-top: 1px solid var(--hairline);
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 13px;
-    color: var(--light);
-  }
-  .cal-footer a { color: var(--teal); }
-
-  /* ── Loading ── */
-  .loading-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: var(--bg);
-    z-index: 300;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 16px;
-  }
-  .loading-overlay.show { display: flex; }
-  .loading-text {
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-size: 16px;
-    color: var(--mid);
-    letter-spacing: 0.05em;
-  }
-  .spinner {
-    width: 32px; height: 32px;
-    border: 2px solid var(--hairline);
-    border-top-color: var(--coral);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* ── Loading ── */
+.loading-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: var(--bg);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+}
+.loading-overlay.show { display: flex; }
+.loading-text {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--ink-lt);
+}
+.spinner {
+  width: 28px; height: 28px;
+  border: 2px solid var(--rule);
+  border-top-color: var(--brown);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
 <div class="loading-overlay show" id="loadingOverlay">
   <div class="spinner"></div>
-  <div class="loading-text">イベント情報を読み込んでいます...</div>
+  <div class="loading-text">読み込み中...</div>
 </div>
 
+<div class="top-rule"></div>
+
 <header class="site-header">
-  <div class="brand">Tiki's Tokyo</div>
-  <div class="live-badge">
+  <div class="header-brand">
+    <div class="header-brand-main">Tiki's Tokyo</div>
+    <div class="header-brand-sub">Event Calendar</div>
+  </div>
+  <div class="header-right">
     <span class="live-dot"></span>
-    <span id="lastUpdated">読込中...</span>
+    <span id="lastUpdated">--</span>
   </div>
 </header>
 
 <div class="hero">
-  <div class="hero-month" id="heroMonth"></div>
-  <div class="hero-title">Events</div>
-  <div class="hero-sub">— Aloha Every Day —</div>
-  <svg class="wave" width="200" height="20" viewBox="0 0 200 20">
-    <path d="M0,10 C25,0 50,20 75,10 S125,0 150,10 S175,20 200,10" fill="none" stroke="#C96B50" stroke-width="1.5" opacity="0.5"/>
-  </svg>
+  <div class="hero-eyebrow">Yoyogi Park · BE STAGE 1F</div>
+  <div class="hero-title">
+    Events
+    <span>TIKI'S TOKYO</span>
+  </div>
+  <div class="hero-caption">Always Aloha</div>
+  <div class="hero-rule"></div>
 </div>
 
 <div class="cal-nav">
   <button class="nav-btn" id="prevBtn">← 前月</button>
-  <div class="nav-month" id="navMonth">
-    <span id="navMonthSub"></span>
+  <div class="nav-month-wrap">
+    <div class="nav-month-ja" id="navMonthJa"></div>
+    <span class="nav-month-en" id="navMonthEn"></span>
   </div>
   <button class="nav-btn" id="nextBtn">翌月 →</button>
 </div>
 
-<div class="filters" id="filters">
-  <button class="filter-btn active" data-type="all">すべて</button>
-  <button class="filter-btn" data-type="hula">フラ</button>
-  <button class="filter-btn" data-type="tahitian">タヒチアン</button>
-  <button class="filter-btn" data-type="yoga">ヨガ</button>
-  <button class="filter-btn" data-type="music">ライブ</button>
-  <button class="filter-btn" data-type="workshop">ワークショップ</button>
-  <button class="filter-btn" data-type="special">特別企画</button>
+<div class="filters-bar">
+  <div class="filters" id="filters">
+    <button class="filter-btn active" data-type="all">すべて</button>
+    <button class="filter-btn" data-type="hula">フラショー</button>
+    <button class="filter-btn" data-type="tahitian">タヒチアン</button>
+    <button class="filter-btn" data-type="workshop">ワークショップ</button>
+    <button class="filter-btn" data-type="music">ライブ</button>
+    <button class="filter-btn" data-type="yoga">ヨガ</button>
+    <button class="filter-btn" data-type="special">特別企画</button>
+  </div>
 </div>
 
 <div class="calendar-wrap">
   <div class="weekday-header">
-    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div>
-    <div>Thu</div><div>Fri</div><div>Sat</div>
+    <div>Sun</div><div>Mon</div><div>Tue</div>
+    <div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
   </div>
   <div class="cal-grid" id="calGrid"></div>
 </div>
 
-<footer class="cal-footer">
-  Tiki's Tokyo — 代々木公園 BE STAGE 1F<br>
-  <a href="https://www.instagram.com/tikis.tokyo/" target="_blank">@tikis.tokyo</a>
+<div class="footer-band">
+  <div class="footer-band-title">Instagram</div>
+  <a class="footer-band-link"
+     href="https://www.instagram.com/tikis.tokyo/"
+     target="_blank" rel="noopener">@tikis.tokyo</a>
+</div>
+
+<footer class="site-footer">
+  Tiki's Tokyo
+  <span class="footer-sep">|</span>
+  代々木公園 BE STAGE 1F
+  <span class="footer-sep">|</span>
+  <a href="https://www.tikis.jp/" target="_blank" rel="noopener">tikis.jp</a>
+  <span class="footer-sep">|</span>
+  <span id="footerUpdated"></span>
 </footer>
 
-<!-- Modal -->
-<div class="modal-overlay" id="modalOverlay">
+<div class="modal-overlay" id="modalOverlay"
+     onclick="if(event.target===this)closeModal()">
   <div class="modal">
-    <button class="modal-close" id="modalClose">×</button>
-    <div class="modal-date" id="modalDate"></div>
-    <div class="modal-title" id="modalTitle"></div>
-    <div class="modal-events" id="modalEvents"></div>
+    <div class="modal-header">
+      <button class="modal-close" onclick="closeModal()">×</button>
+      <div class="modal-date" id="modalDate"></div>
+      <div class="modal-title" id="modalTitle"></div>
+    </div>
+    <div class="modal-body" id="modalEvents"></div>
   </div>
 </div>
 
 <script>
-// ── State ──
-let allEvents = [];
-let currentYear, currentMonth;
-let activeFilter = 'all';
-let fetchedAt = null;
+const TYPE_META = {
+  hula:     { label: 'Hula Show'    },
+  tahitian: { label: 'Tahitian'     },
+  workshop: { label: 'Workshop'     },
+  music:    { label: 'Live Music'   },
+  yoga:     { label: 'Yoga'         },
+  special:  { label: 'Special'      },
+  closed:   { label: 'Closed'       },
+};
 
 const MONTHS_JA = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-const MONTHS_HW = ["'Ianuali","Pepeluali","Malaki","'Apelila","Mei","Iune","Iulai",'Aukake',"Kepakemapa","'Okakopa","Nowemapa","Kekemapa"];
+const MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS_JA   = ['日','月','火','水','木','金','土'];
 
-// ── Init ──
+let allEvents    = [];
+let activeFilter = 'all';
+let lastFetchedAt = null;
+
 const now = new Date();
-currentYear  = now.getFullYear();
-currentMonth = now.getMonth(); // 0-based
+let currentYear  = now.getFullYear();
+let currentMonth = now.getMonth();
 
-updateHeroMonth();
-renderNavMonth();
+renderNav();
 loadEvents();
-
-// Auto-refresh every 5 min
 setInterval(loadEvents, 5 * 60 * 1000);
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && fetchedAt && Date.now() - fetchedAt > 5 * 60 * 1000) {
-    loadEvents();
+  if (!document.hidden && lastFetchedAt) {
+    if (Date.now() - lastFetchedAt > 5 * 60 * 1000) loadEvents();
   }
 });
 
-// ── Fetch ──
 async function loadEvents() {
   try {
     const res = await fetch('/api/events');
     if (!res.ok) throw new Error(res.statusText);
     const data = await res.json();
-    allEvents = data.events || [];
-    fetchedAt = Date.now();
-    updateLastUpdated();
+    allEvents    = data.events || [];
+    lastFetchedAt = data.fetchedAt ? new Date(data.fetchedAt).getTime() : Date.now();
+    updateTimestamp();
     renderCalendar();
-  } catch (e) {
-    console.error('fetch error:', e);
+  } catch(e) {
+    console.error(e);
     document.getElementById('lastUpdated').textContent = '取得失敗';
-    renderCalendar(); // render empty
+    renderCalendar();
   } finally {
     document.getElementById('loadingOverlay').classList.remove('show');
   }
 }
 
-function updateLastUpdated() {
-  if (!fetchedAt) return;
-  const mins = Math.floor((Date.now() - fetchedAt) / 60000);
-  const txt = mins === 0 ? 'たった今' : `${mins}分前`;
-  document.getElementById('lastUpdated').textContent = `LIVE · 最終更新 ${txt}`;
+function updateTimestamp() {
+  if (!lastFetchedAt) return;
+  const mins = Math.floor((Date.now() - lastFetchedAt) / 60000);
+  const label = mins === 0 ? 'LIVE' : `更新 ${mins}分前`;
+  document.getElementById('lastUpdated').textContent = label;
+  document.getElementById('footerUpdated').textContent = label;
 }
-setInterval(updateLastUpdated, 60000);
+setInterval(updateTimestamp, 60000);
 
-// ── Nav ──
 document.getElementById('prevBtn').onclick = () => {
-  currentMonth--;
-  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
-  renderNavMonth(); updateHeroMonth(); renderCalendar();
+  if (--currentMonth < 0) { currentMonth = 11; currentYear--; }
+  renderNav(); renderCalendar();
 };
 document.getElementById('nextBtn').onclick = () => {
-  currentMonth++;
-  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-  renderNavMonth(); updateHeroMonth(); renderCalendar();
+  if (++currentMonth > 11) { currentMonth = 0; currentYear++; }
+  renderNav(); renderCalendar();
 };
 
-function updateHeroMonth() {
-  document.getElementById('heroMonth').textContent =
-    `${MONTHS_HW[currentMonth]} · ${currentYear}`;
-}
-function renderNavMonth() {
-  document.getElementById('navMonth').innerHTML =
-    `${currentYear}年 ${MONTHS_JA[currentMonth]}<span>${MONTHS_HW[currentMonth].toUpperCase()}</span>`;
+function renderNav() {
+  document.getElementById('navMonthJa').textContent =
+    `${currentYear}年 ${MONTHS_JA[currentMonth]}`;
+  document.getElementById('navMonthEn').textContent =
+    `${MONTHS_EN[currentMonth].toUpperCase()} ${currentYear}`;
 }
 
-// ── Filters ──
 document.getElementById('filters').onclick = e => {
   const btn = e.target.closest('.filter-btn');
   if (!btn) return;
@@ -538,47 +666,41 @@ document.getElementById('filters').onclick = e => {
   renderCalendar();
 };
 
-// ── Calendar Render ──
-function getEventsForDate(dateStr) {
-  return allEvents.filter(ev => {
-    if (ev.date !== dateStr) return false;
-    if (activeFilter === 'all') return true;
-    return ev.type === activeFilter;
+function eventsForDate(dateStr) {
+  return allEvents.filter(e => {
+    if (e.date !== dateStr) return false;
+    return activeFilter === 'all' || e.type === activeFilter;
   });
+}
+
+function toDateStr(y, m, d) {
+  return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 }
 
 function renderCalendar() {
   const grid = document.getElementById('calGrid');
   grid.innerHTML = '';
 
-  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const firstDay    = new Date(currentYear, currentMonth, 1).getDay();
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const todayStr = formatDateStr(now);
+  const prevDays    = new Date(currentYear, currentMonth, 0).getDate();
+  const todayStr    = toDateStr(now.getFullYear(), now.getMonth(), now.getDate());
 
-  // Leading cells from prev month
-  const prevDays = new Date(currentYear, currentMonth, 0).getDate();
   for (let i = 0; i < firstDay; i++) {
-    const d = prevDays - firstDay + 1 + i;
-    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-    const prevYear  = currentMonth === 0 ? currentYear - 1 : currentYear;
-    const dateStr = `${prevYear}-${String(prevMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    grid.appendChild(makeCell(d, dateStr, true));
+    const d  = prevDays - firstDay + 1 + i;
+    const pm = currentMonth === 0 ? 11 : currentMonth - 1;
+    const py = currentMonth === 0 ? currentYear - 1 : currentYear;
+    grid.appendChild(makeCell(d, toDateStr(py, pm, d), true));
   }
-
-  // Current month cells
   for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    grid.appendChild(makeCell(d, dateStr, false, dateStr === todayStr));
+    const ds = toDateStr(currentYear, currentMonth, d);
+    grid.appendChild(makeCell(d, ds, false, ds === todayStr));
   }
-
-  // Trailing cells
-  const totalCells = firstDay + daysInMonth;
-  const trailing = (7 - (totalCells % 7)) % 7;
+  const trailing = (7 - ((firstDay + daysInMonth) % 7)) % 7;
   for (let i = 1; i <= trailing; i++) {
-    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
-    const nextYear  = currentMonth === 11 ? currentYear + 1 : currentYear;
-    const dateStr = `${nextYear}-${String(nextMonth+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-    grid.appendChild(makeCell(i, dateStr, true));
+    const nm = currentMonth === 11 ? 0 : currentMonth + 1;
+    const ny = currentMonth === 11 ? currentYear + 1 : currentYear;
+    grid.appendChild(makeCell(i, toDateStr(ny, nm, i), true));
   }
 }
 
@@ -586,46 +708,38 @@ function makeCell(day, dateStr, otherMonth, isToday = false) {
   const cell = document.createElement('div');
   cell.className = 'cal-cell';
   if (otherMonth) cell.classList.add('other-month');
-  if (isToday) cell.classList.add('today');
+  if (isToday)    cell.classList.add('today');
 
-  // Day-of-week class
-  const dow = new Date(dateStr).getDay();
+  const dow = new Date(dateStr + 'T00:00:00').getDay();
   if (dow === 0) cell.classList.add('sunday');
   if (dow === 6) cell.classList.add('saturday');
 
-  const events = getEventsForDate(dateStr);
-  const hasClosed  = events.some(e => e.type === 'closed');
-  const hasFeatured = events.some(e => e.featured);
-  if (hasClosed) cell.classList.add('closed');
-  if (hasFeatured) cell.classList.add('featured');
+  const events = eventsForDate(dateStr);
+  if (events.some(e => e.type === 'closed'))  cell.classList.add('closed');
 
-  // Date number
   const dateEl = document.createElement('div');
   dateEl.className = 'cell-date';
   dateEl.textContent = day;
   cell.appendChild(dateEl);
 
-  // Event pills (desktop)
   const pillsEl = document.createElement('div');
   pillsEl.className = 'cell-events';
-  const maxPills = 3;
-  events.slice(0, maxPills).forEach(ev => {
+  events.slice(0, 3).forEach(ev => {
     const pill = document.createElement('div');
-    pill.className = `event-pill ${ev.type}${ev.featured ? ' featured-pill' : ''}`;
-    const timeStr = ev.times && ev.times.length ? ev.times[0] + '~ ' : '';
-    pill.textContent = timeStr + ev.title;
+    pill.className = `event-pill ${ev.type}`;
+    const t = ev.times && ev.times.length ? ev.times[0] + ' ' : '';
+    pill.textContent = t + ev.title;
     pill.title = ev.title;
     pillsEl.appendChild(pill);
   });
-  if (events.length > maxPills) {
+  if (events.length > 3) {
     const more = document.createElement('div');
-    more.className = 'event-pill special';
-    more.textContent = `+${events.length - maxPills}件`;
+    more.className = 'event-pill more';
+    more.textContent = `+${events.length - 3}件`;
     pillsEl.appendChild(more);
   }
   cell.appendChild(pillsEl);
 
-  // Dots (mobile)
   if (events.length > 0) {
     const dotRow = document.createElement('div');
     dotRow.className = 'dot-row';
@@ -641,55 +755,46 @@ function makeCell(day, dateStr, otherMonth, isToday = false) {
   return cell;
 }
 
-// ── Modal ──
-document.getElementById('modalClose').onclick = closeModal;
-document.getElementById('modalOverlay').onclick = e => {
-  if (e.target === document.getElementById('modalOverlay')) closeModal();
-};
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
 function openModal(dateStr, events) {
-  const d = new Date(dateStr);
-  const dow = DAYS_JA[d.getDay()];
-  const [y, m, day] = dateStr.split('-');
+  const [y, m, d] = dateStr.split('-');
+  const dow = DAYS_JA[new Date(dateStr + 'T00:00:00').getDay()];
   document.getElementById('modalDate').textContent =
-    `${y}年 ${parseInt(m)}月 ${parseInt(day)}日（${dow}）`;
+    `${y}年${parseInt(m)}月${parseInt(d)}日（${dow}）`;
   document.getElementById('modalTitle').textContent =
-    events.length ? `${events.length}件のイベント` : 'イベントなし';
+    events.length ? `${events.length}件のイベント` : '本日のご案内';
 
-  const container = document.getElementById('modalEvents');
-  container.innerHTML = '';
+  const body = document.getElementById('modalEvents');
+  body.innerHTML = '';
 
   if (!events.length) {
-    container.innerHTML = '<div class="modal-empty">この日は定期営業または休業日です</div>';
+    body.innerHTML = '<div class="modal-empty">この日はイベントの予定はありません</div>';
   } else {
     events.forEach(ev => {
       const el = document.createElement('div');
-      el.className = `modal-event ${ev.type}${ev.featured ? ' featured' : ''}`;
-
+      el.className = `modal-event ${ev.type}`;
+      const meta = TYPE_META[ev.type] || {};
       const timeStr = ev.times && ev.times.length
-        ? ev.times.map(t => `${t}~`).join(' / ')
+        ? ev.times.map(t => t).join(' / ')
         : '';
-
       el.innerHTML = `
+        ${meta.label ? `<div class="modal-event-label">${meta.label}</div>` : ''}
         <div class="modal-event-title">${ev.title}</div>
         ${timeStr ? `<div class="modal-event-time">${timeStr}</div>` : ''}
         ${ev.description ? `<div class="modal-event-desc">${ev.description}</div>` : ''}
       `;
-      container.appendChild(el);
+      body.appendChild(el);
     });
   }
 
   document.getElementById('modalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
 
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
-}
-
-// ── Helpers ──
-function formatDateStr(d) {
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  document.body.style.overflow = '';
 }
 </script>
 </body>
