@@ -6,7 +6,7 @@ function fmtDate(d){return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padS
 function fmtTime(d){return String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0');}
 function expandRec(ev,s,e){const res=[];try{const R=require('rrule');const RR=R.RRule||(R.default&&R.default.RRule)||R;const ds=toJST(ev.start);const dur=ev.end?new Date(ev.end)-new Date(ev.start):3600000;let rs='';if(ev.rrule&&ev.rrule.toString)rs=ev.rrule.toString();else if(typeof ev.rrule==='string')rs=ev.rrule;if(!rs)return res;const rule=RR.fromString(rs.includes('DTSTART')?rs:'DTSTART:'+ds.toISOString().replace(/[-:]/g,'').replace('.000Z','Z')+'\n'+rs);const exs=(ev.exdate?Object.values(ev.exdate):[]).map(x=>fmtDate(toJST(x instanceof Date?x:x.val)));for(const d of rule.between(s,e,true)){const o=toJST(d);const dt=fmtDate(o);if(exs.includes(dt))continue;const cs=new Date(Date.UTC(o.getUTCFullYear(),o.getUTCMonth(),o.getUTCDate(),ds.getUTCHours(),ds.getUTCMinutes()));res.push({date:dt,startTime:fmtTime(cs),endTime:ev.end?fmtTime(new Date(+cs+dur)):null,isRecurring:true});}}catch(err){console.error(err.message);}return res;}
 module.exports=async(req,res)=>{
-  res.setHeader('Cache-Control','s-maxage=300,stale-while-revalidate');
+  res.setHeader('Cache-Control','s-maxage=60,stale-while-revalidate=60');
   res.setHeader('Access-Control-Allow-Origin','*');
   const url=process.env.GCAL_ICAL_URL;
   if(!url)return res.status(500).json({error:'GCAL_ICAL_URL not set'});
