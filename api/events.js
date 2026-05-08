@@ -1,6 +1,6 @@
 const ical = require('node-ical');
 const COLOR_MAP = {'11':'hula','4':'hula','5':'tahitian','7':'workshop','10':'music','9':'yoga','8':'special','1':'special'};
-const TYPE_FROM_TITLE=(t)=>{const s=t.toLowerCase();if(s.includes('tahitian')||s.includes('タヒチ'))return'tahitian';if(s.includes('hula')||s.includes('フラ'))return'hula';if(s.includes('yoga')||s.includes('ヨガ'))return'yoga';if(s.includes('workshop')||s.includes('ワークショップ'))return'workshop';if(s.includes('live')||s.includes('music')||s.includes('ライブ')||s.includes('ミュージック'))return'music';if(s.includes('close')||s.includes('貸切')||s.includes('定休'))return'closed';return'special';};
+const TYPE_FROM_TITLE=(t)=>{const s=t.toLowerCase();if(s.includes('tahitian')||s.includes('タヒチ'))return'tahitian';if(s.includes('hula')||s.includes('フラ'))return'hula';if(s.includes('yoga')||s.includes('ヨガ'))return'yoga';if(s.includes('workshop')||s.includes('ワークショップ')||t.includes('🌸'))return'workshop';if(s.includes('live')||s.includes('music')||s.includes('ライブ')||s.includes('ミュージック'))return'music';if(s.includes('close')||s.includes('貸切')||s.includes('定休'))return'closed';return'special';};
 function toJST(d){if(!d)return null;return new Date(new Date(d).getTime()+9*3600000);}
 function fmtDate(d){return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');}
 function fmtTime(d){return String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0');}
