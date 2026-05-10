@@ -1,12 +1,12 @@
 {
   "_comment": "Tiki's Tokyo｜カテゴリ定義。新カテゴリ追加・絵文字追加・色変更はこのファイル1つで完結する。",
-  "_priorityRule": "1イベントが複数カテゴリに該当する場合、priority の高い順に primary が決まる。常にfalseのcategoriesは無視。",
+  "_priorityRule": "1イベントが複数カテゴリに該当する場合、priority の高い順に primary が決まる。",
+  "_designContract": "id は index.html の .event-pill / .dot / .filter-btn data-type と一致させる必要がある (hula / music / yoga / workshop / special / closed)。Kawasaki 要望によりフラとタヒチは hula に統合。",
+
   "categories": [
     {
       "id": "closed",
       "label": "貸切・休業",
-      "labelEn": "Closed",
-      "color": "#7A8278",
       "priority": 200,
       "emojis": ["🔒", "🚫"],
       "keywords": ["貸切", "CLOSE", "Close", "休業", "臨時休業", "定休"],
@@ -15,8 +15,6 @@
     {
       "id": "special",
       "label": "特別企画",
-      "labelEn": "Special",
-      "color": "#B8852E",
       "priority": 150,
       "emojis": ["🎉", "🎊"],
       "keywords": ["1周年", "1st Anniversary", "周年記念", "Anniversary"],
@@ -25,17 +23,13 @@
     {
       "id": "music",
       "label": "ライブ",
-      "labelEn": "Live",
-      "color": "#0F5462",
       "priority": 100,
       "emojis": ["🎵", "🎶", "🎸", "🎤", "🎹", "🎺"],
       "keywords": ["LIVE", "Live", "MUSIC", "Music", "ライブ", "DJ", "Hawaiian Live", "MONDAY MUSIC"]
     },
     {
-      "id": "hula_tahiti",
-      "label": "フラ・タヒチ",
-      "labelEn": "Hula / Tahiti",
-      "color": "#C94538",
+      "id": "hula",
+      "label": "フラ/タヒチショー",
       "priority": 90,
       "emojis": ["🌺", "🌴"],
       "keywords": ["HULA", "Hula", "TAHITI", "Tahiti", "TAHITIAN", "Tahitian", "フラ", "タヒチ"]
@@ -43,8 +37,6 @@
     {
       "id": "workshop",
       "label": "ワークショップ",
-      "labelEn": "Workshop",
-      "color": "#8B5E1F",
       "priority": 80,
       "emojis": ["🎀", "🌸", "🎨", "✂️", "📚"],
       "keywords": ["ワークショップ", "Workshop", "WORKSHOP"]
@@ -52,22 +44,11 @@
     {
       "id": "yoga",
       "label": "ヨガ",
-      "labelEn": "Yoga",
-      "color": "#3F6555",
       "priority": 70,
       "emojis": ["🧘", "🧘‍♀️", "🧘‍♂️"],
       "keywords": ["YOGA", "Yoga", "ヨガ", "Moonlight Yoga"]
-    },
-    {
-      "id": "pet",
-      "label": "ペット",
-      "labelEn": "Pet",
-      "color": "#9C6644",
-      "priority": 60,
-      "emojis": ["🐶", "🐕", "🐾"],
-      "keywords": ["DOG", "Dog", "PET", "Pet", "犬", "ペット"]
     }
   ],
-  "fallbackCategoryId": "hula_tahiti",
-  "_fallbackComment": "どのカテゴリにもマッチしない場合の既定値。Tiki's はフラ主体のため hula_tahiti をフォールバックに。"
+  "fallbackCategoryId": "hula",
+  "_fallbackComment": "どのカテゴリにもマッチしない場合の既定値。Tiki's はフラ主体のため hula をフォールバックに。"
 }

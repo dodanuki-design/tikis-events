@@ -1,76 +1,128 @@
 // ============================================================
-// api/events.js
+// api/events.js — Tiki's Tokyo Event Calendar
 // Google Calendar (iCal) → 構造化 JSON
-// 判定ロジックは config/categories.json と config/display.json から読み込み。
-// 1イベント複数カテゴリ対応 / 説明欄パース / 貸切時間範囲表示 等。
+//
+// 出力契約 (index.html が消費):
+//   {
+//     events: [
+//       {
+//         date: "YYYY-MM-DD",
+//         type: "hula" | "music" | "yoga" | "workshop" | "special" | "closed",
+//         title: string,                 // pill / modal にそのまま表示
+//         times: string[],               // ["19:30"] や ["15:00–17:00"]。空 = 時刻欄非表示
+//         description: string | undefined  // モーダルに表示。ゲスト・Music Charge 等を含む
+//       }
+//     ],
+//     fetchedAt: ISO string
+//   }
+//
+// 依存ライブラリゼロ（native fetch + 軽量 iCal パーサー）。旧版で node-ical が
+// CommonJS で require できず 500 になっていた問題を解消。
 // ============================================================
-const fs = require('fs');
-const path = require('path');
 
-// node-ical のロード失敗を捕捉（モジュールレベルのクラッシュ → FUNCTION_INVOCATION_FAILED を防ぐ）
-let ical, _icalError;
-try {
-  ical = require('node-ical');
-} catch (e) {
-  _icalError = e;
-}
+const CATEGORIES_CONFIG = require('../config/categories.json');
+const DISPLAY_CONFIG = require('../config/display.json');
 
-// ----------- 設定ファイル読み込み（初回ハンドラ呼び出し時にキャッシュ） -----------
-let CATEGORIES_CONFIG, DISPLAY_CONFIG, _initError;
-
-function loadConfig(name) {
-  const tryPaths = [
-    path.join(process.cwd(), 'config', `${name}.json`),
-    path.join(__dirname, '..', 'config', `${name}.json`),
-    path.join(__dirname, 'config', `${name}.json`),
-  ];
-  for (const p of tryPaths) {
-    if (fs.existsSync(p)) {
-      return JSON.parse(fs.readFileSync(p, 'utf-8'));
+// ---------- iCal パーサー (RFC5545 サブセット) ----------
+function unfoldLines(text) {
+  const raw = text.replace(/\r\n|\r/g, '\n').split('\n');
+  const out = [];
+  for (const line of raw) {
+    if ((line.startsWith(' ') || line.startsWith('\t')) && out.length) {
+      out[out.length - 1] += line.slice(1);
+    } else {
+      out.push(line);
     }
   }
-  throw new Error(`Config not found: ${name}.json (tried: ${tryPaths.join(', ')})`);
+  return out;
 }
 
-function ensureConfig() {
-  if (CATEGORIES_CONFIG && DISPLAY_CONFIG) return null;
-  if (_initError) return _initError;
-  try {
-    CATEGORIES_CONFIG = loadConfig('categories');
-    DISPLAY_CONFIG = loadConfig('display');
-    return null;
-  } catch (e) {
-    _initError = e;
-    return e;
+function unescapeText(s) {
+  if (!s) return s;
+  return s.replace(/\\n/gi, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\');
+}
+
+function splitProp(line) {
+  const colon = line.indexOf(':');
+  if (colon < 0) return null;
+  const head = line.slice(0, colon);
+  const value = line.slice(colon + 1);
+  const parts = head.split(';');
+  const name = parts[0].toUpperCase();
+  const params = {};
+  for (let i = 1; i < parts.length; i++) {
+    const eq = parts[i].indexOf('=');
+    if (eq > 0) params[parts[i].slice(0, eq).toUpperCase()] = parts[i].slice(eq + 1);
   }
+  return { name, params, value };
 }
 
-// ----------- 検出ヘルパー -----------
-function detectCategories(title) {
+function parseICalDateTime(value, params) {
+  if (!value) return null;
+  const isDateOnly = !value.includes('T');
+  const m = value.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2}))?(Z?)$/);
+  if (!m) return null;
+  const [, y, mo, d, h = '00', mi = '00', s = '00', z] = m;
+  if (isDateOnly) {
+    return { date: new Date(Date.UTC(+y, +mo - 1, +d, -9, 0, 0)), allDay: true };
+  }
+  if (z === 'Z') {
+    return { date: new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s)), allDay: false };
+  }
+  const tzid = (params && params.TZID) || 'Asia/Tokyo';
+  if (/^Asia\/Tokyo$|^JST$/i.test(tzid)) {
+    return { date: new Date(Date.UTC(+y, +mo - 1, +d, +h - 9, +mi, +s)), allDay: false };
+  }
+  return { date: new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s)), allDay: false };
+}
+
+function parseICS(text) {
+  const lines = unfoldLines(text);
+  const events = [];
+  let cur = null;
+  for (const raw of lines) {
+    if (!raw) continue;
+    if (raw === 'BEGIN:VEVENT') { cur = {}; continue; }
+    if (raw === 'END:VEVENT') {
+      if (cur && cur.uid && cur.start) events.push(cur);
+      cur = null;
+      continue;
+    }
+    if (!cur) continue;
+    const p = splitProp(raw);
+    if (!p) continue;
+    switch (p.name) {
+      case 'UID': cur.uid = p.value; break;
+      case 'SUMMARY': cur.summary = unescapeText(p.value); break;
+      case 'DESCRIPTION': cur.description = unescapeText(p.value); break;
+      case 'LOCATION': cur.location = unescapeText(p.value); break;
+      case 'DTSTART': cur.start = parseICalDateTime(p.value, p.params); break;
+      case 'DTEND': cur.end = parseICalDateTime(p.value, p.params); break;
+      case 'STATUS': cur.status = p.value; break;
+    }
+  }
+  return events;
+}
+
+// ---------- カテゴリ判定 ----------
+function detectCategories(text) {
   const matched = [];
-  const t = (title || '').trim();
+  const t = (text || '').trim();
   if (!t) return matched;
-
   for (const cat of CATEGORIES_CONFIG.categories) {
-    let matchType = null; // 'emoji' | 'keyword' | null
-
-    // 1. 絵文字マッチ（明示的な意図表現）
-    if (cat.emojis && cat.emojis.length) {
+    let matchType = null;
+    if (Array.isArray(cat.emojis)) {
       for (const emoji of cat.emojis) {
         if (t.includes(emoji)) { matchType = 'emoji'; break; }
       }
     }
-
-    // 2. キーワードマッチ後保険（保険時のみ。
-    if (!matchType && cat.keywords && cat.keywords.length) {
+    if (!matchType && Array.isArray(cat.keywords)) {
       for (const kw of cat.keywords) {
         if (t.includes(kw)) { matchType = 'keyword'; break; }
       }
     }
-
     if (matchType) matched.push({ ...cat, matchType });
   }
-
   return matched;
 }
 
@@ -79,229 +131,131 @@ function pickPrimary(categories) {
     const fb = CATEGORIES_CONFIG.categories.find(c => c.id === CATEGORIES_CONFIG.fallbackCategoryId);
     return fb || CATEGORIES_CONFIG.categories[0];
   }
-  // 優先順位ルール:
-  //   1) emoji マッチを keyword より優先（明示的な意図 > 部分文字列の偶然一致）
-  //   2) 同じ matchType 内では priority の高い順
-  // 例: 「🌸 ワークショップ（カンナフラワー）」
-  //     - 🌸 → workshop (emoji) と 「フラ」→ hula_tahiti (keyword)
-  //     - emoji 優先で workshop が primary になる
   return [...categories].sort((a, b) => {
-    if (a.matchType !== b.matchType) {
-      return a.matchType === 'emoji' ? -1 : 1;
-    }
+    if (a.matchType !== b.matchType) return a.matchType === 'emoji' ? -1 : 1;
     return (b.priority || 0) - (a.priority || 0);
   })[0];
 }
 
 function isFeatured(categories, title) {
-  // markFeatured カテゴリにマッチした、または special キーワード相当の場合
-  return categories.some(c => c.markFeatured) || /1\s*周年|Anniversary|🎉|🎊/i.test(title || '');
+  return categories.some(c => c.markFeatured) || /1\s*周年|周年記念|Anniversary|🎉|🎊/i.test(title || '');
 }
 
-// ----------- タイトル・ゲスト整形 -----------
+// ---------- タイトル / ゲスト整形 ----------
+function dedupe(arr) {
+  return Array.from(new Set((arr || []).map(s => (s || '').trim()).filter(Boolean)));
+}
+
 function extractGuestAndCleanTitle(title) {
   if (!title) return { cleanTitle: '', guests: [] };
   let cleanTitle = title;
   const guests = [];
-
   const conf = DISPLAY_CONFIG.guestExtractor;
-  if (conf && conf.patterns) {
+  if (conf && Array.isArray(conf.patterns)) {
     for (const p of conf.patterns) {
       const re = new RegExp(p.regex, 'g');
       let m;
       while ((m = re.exec(title)) !== null) {
-        if (m[1]) {
-          guests.push(m[1].trim());
-        }
+        if (m[1]) guests.push(m[1].trim());
       }
-      if (conf.stripFromTitle) {
-        cleanTitle = cleanTitle.replace(re, '').trim();
-      }
+      if (conf.stripFromTitle) cleanTitle = cleanTitle.replace(re, '').trim();
     }
   }
-
-  // 表示用の追加クリーンアップ
-  if (DISPLAY_CONFIG.titleCleanup && DISPLAY_CONFIG.titleCleanup.stripPatterns) {
+  if (DISPLAY_CONFIG.titleCleanup && Array.isArray(DISPLAY_CONFIG.titleCleanup.stripPatterns)) {
     for (const ptn of DISPLAY_CONFIG.titleCleanup.stripPatterns) {
       cleanTitle = cleanTitle.replace(new RegExp(ptn, 'g'), '').trim();
     }
   }
-
-  // 余分な空白を圧縮
   cleanTitle = cleanTitle.replace(/\s{2,}/g, ' ').trim();
-
   return { cleanTitle, guests: dedupe(guests) };
 }
 
-function dedupe(arr) {
-  return Array.from(new Set(arr.filter(Boolean)));
-}
-
-// ----------- 説明欄パース -----------
+// ---------- 説明欄パース → properties (ラベル/値ペア) ----------
 function parseDescription(desc) {
   const result = { properties: [], freeText: '' };
   if (!desc) return result;
-
   const text = String(desc).replace(/\r\n/g, '\n').trim();
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const fieldDefs = (DISPLAY_CONFIG.descriptionParsers && DISPLAY_CONFIG.descriptionParsers.fields) || [];
-
-  const remainingLines = [];
+  const remaining = [];
   for (const line of lines) {
     const m = line.match(/^([^:：]+)[:：]\s*(.+)$/);
-    if (!m) {
-      remainingLines.push(line);
-      continue;
-    }
+    if (!m) { remaining.push(line); continue; }
     const key = m[1].trim();
     const value = m[2].trim();
     const def = fieldDefs.find(d => d.keys.some(k => k.toLowerCase() === key.toLowerCase()));
-    if (def) {
-      result.properties.push({
-        label: def.label,
-        value: value,
-        isLink: def.isLink || /^https?:\/\//.test(value),
-      });
-    } else {
-      // 未定義のKey:Value も保持（汎用性）
-      result.properties.push({
-        label: key,
-        value: value,
-        isLink: /^https?:\/\//.test(value),
-      });
-    }
+    result.properties.push({
+      label: def ? def.label : key,
+      value,
+    });
   }
-
-  result.freeText = remainingLines.join('\n').trim();
+  result.freeText = remaining.join('\n').trim();
   return result;
 }
 
-// ----------- 時刻処理 -----------
-const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+// ---------- 説明文の組み立て: ゲスト + properties + freeText ----------
+function buildDescription(guests, properties, freeText) {
+  const lines = [];
+  const conf = DISPLAY_CONFIG.guestExtractor || {};
+  const prefix = conf.guestPrefix || 'ゲスト：';
+  const sep = conf.guestSeparator || ' / ';
 
+  // 説明欄の "ゲスト" プロパティもタイトル抽出ゲストとマージ
+  const propGuests = properties.filter(p => p.label === 'ゲスト').map(p => p.value);
+  const allGuests = dedupe([...guests, ...propGuests]);
+  if (allGuests.length) lines.push(prefix + allGuests.join(sep));
+
+  for (const p of properties) {
+    if (p.label === 'ゲスト') continue;
+    lines.push(`${p.label}：${p.value}`);
+  }
+  if (freeText) lines.push(freeText);
+  return lines.join('\n');
+}
+
+// ---------- 複合カテゴリのタイトル分割 ----------
+// 1イベントに複数カテゴリ (例: "🎵 MONDAY MUSIC × HULA SHOW") がある時、
+// 区切り文字でタイトルを分割し、各カテゴリにマッチする部分タイトルを取り出す。
+function splitCompositeTitle(cleanTitle, matchedCats) {
+  const conf = DISPLAY_CONFIG.compositeSplitter;
+  if (!conf || !conf.enabled) return null;
+  if (matchedCats.length < 2) return null;
+
+  const seps = (conf.separators && conf.separators.length) ? conf.separators : ['×', '✕'];
+  // 全 separator を統一マーカーに置換 → split
+  const MARKER = ' SPLIT ';
+  let working = cleanTitle;
+  for (const s of seps) working = working.split(s).join(MARKER);
+  const parts = working.split(MARKER).map(s => s.trim()).filter(Boolean);
+  if (parts.length < 2) return null;
+
+  // 各部分タイトルのカテゴリを再判定し、対応する {type, title} を返す
+  const segs = [];
+  const seenTypes = new Set();
+  for (const part of parts) {
+    const cats = detectCategories(part);
+    if (!cats.length) continue;
+    const prim = pickPrimary(cats);
+    if (seenTypes.has(prim.id)) continue;
+    seenTypes.add(prim.id);
+    segs.push({ type: prim.id, title: part });
+  }
+  return segs.length >= 2 ? segs : null;
+}
+
+// ---------- JST 時刻ヘルパ ----------
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 function toJSTDateStr(date) {
   const d = new Date(date.getTime() + JST_OFFSET_MS);
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
 }
-
 function toJSTTime(date) {
   const d = new Date(date.getTime() + JST_OFFSET_MS);
-  const h = String(d.getUTCHours()).padStart(2, '0');
-  const m = String(d.getUTCMinutes()).padStart(2, '0');
-  return `${h}:${m}`;
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
 }
 
-function isAllDay(ev) {
-  // node-ical では DATE 型（時刻なし）の DTSTART は datetype === 'date'
-  return ev.datetype === 'date' || ev.start?.dateOnly === true;
-}
-
-// ----------- 貸切表示 -----------
-function buildClosedDisplay(ev, startTime, endTime, cleanTitle) {
-  const conf = DISPLAY_CONFIG.closedDisplay || {};
-  const label = (conf.labelFromTitle && cleanTitle) ? cleanTitle : (conf.fallbackLabel || '貸切');
-  if (endTime) {
-    return (conf.format || '{startTime}–{endTime} {label}')
-      .replace('{startTime}', startTime)
-      .replace('{endTime}', endTime)
-      .replace('{label}', label);
-  }
-  return (conf.noEndTimeFormat || '{startTime}〜 {label}')
-    .replace('{startTime}', startTime)
-    .replace('{label}', label);
-}
-
-// ----------- iCal RRULE 展開（TZ補正付き） -----------
-function expandRecurring(ev, rangeStart, rangeEnd, modifications) {
-  const out = [];
-  let rawDates;
-  try {
-    rawDates = ev.rrule.between(rangeStart, rangeEnd, true);
-  } catch (e) {
-    console.warn('RRULE expand failed:', ev.summary, e.message);
-    return out;
-  }
-
-  // node-ical + rrule の TZ 整合バグ対策。
-  // ev.start は TZID を正しく解釈した UTC Date。これと rrule 出力との差から JST 時刻を抽出。
-  const evStartJST = new Date(ev.start.getTime() + JST_OFFSET_MS);
-  const hourJST = evStartJST.getUTCHours();
-  const minJST = evStartJST.getUTCMinutes();
-  const durationMs = ev.end ? (ev.end.getTime() - ev.start.getTime()) : 0;
-
-  for (const rawDate of rawDates) {
-    const rawJST = new Date(rawDate.getTime() + JST_OFFSET_MS);
-    const y = rawJST.getUTCFullYear();
-    const m = rawJST.getUTCMonth();
-    const d = rawJST.getUTCDate();
-    const start = new Date(Date.UTC(y, m, d, hourJST - 9, minJST));
-    const end = durationMs > 0 ? new Date(start.getTime() + durationMs) : null;
-
-    // EXDATE チェック
-    if (ev.exdate) {
-      const excluded = Object.values(ev.exdate).some(ex => {
-        const exJST = new Date(new Date(ex).getTime() + JST_OFFSET_MS);
-        return exJST.getUTCFullYear() === y
-            && exJST.getUTCMonth() === m
-            && exJST.getUTCDate() === d;
-      });
-      if (excluded) continue;
-    }
-
-    // 個別変更（recurrence-id）
-    const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    let mod = null;
-    for (const [modKey, modEv] of modifications.entries()) {
-      if (!modKey.startsWith(ev.uid + '|')) continue;
-      const recId = modKey.split('|')[1];
-      const recJST = new Date(new Date(recId).getTime() + JST_OFFSET_MS);
-      const recStr = `${recJST.getUTCFullYear()}-${String(recJST.getUTCMonth()+1).padStart(2,'0')}-${String(recJST.getUTCDate()).padStart(2,'0')}`;
-      if (recStr === dateStr) { mod = modEv; break; }
-    }
-
-    if (mod) {
-      out.push({
-        uid: ev.uid + '|' + dateStr,
-        start: mod.start,
-        end: mod.end,
-        summary: mod.summary || ev.summary,
-        description: mod.description || '',
-        location: mod.location || ev.location,
-      });
-    } else {
-      out.push({
-        uid: ev.uid + '|' + dateStr,
-        start: start,
-        end: end,
-        summary: ev.summary,
-        description: ev.description || '',
-        location: ev.location,
-      });
-    }
-  }
-
-  return out;
-}
-
-// ----------- メインハンドラ -----------
+// ---------- メインハンドラ ----------
 module.exports = async (req, res) => {
-  // モジュール初期化エラーを JSON で返す（FUNCTION_INVOCATION_FAILED 防止）
-  if (_icalError) {
-    return res.status(500).json({ error: 'node-ical load failed: ' + _icalError.message, events: [] });
-  }
-  const configErr = ensureConfig();
-  if (configErr) {
-    return res.status(500).json({
-      error: 'Config load failed: ' + configErr.message,
-      cwd: process.cwd(),
-      dirname: __dirname,
-      events: [],
-    });
-  }
-
   const url = process.env.GCAL_ICAL_URL;
   if (!url) {
     res.setHeader('Cache-Control', 'no-store');
@@ -312,156 +266,132 @@ module.exports = async (req, res) => {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`Calendar fetch failed: ${response.status}`);
     const icalText = await response.text();
-    const data = ical.parseICS(icalText);
+    const rawEvents = parseICS(icalText);
 
     // 範囲: 1か月前〜6か月先
     const now = new Date();
     const rangeStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const rangeEnd = new Date(now.getFullYear(), now.getMonth() + 6, 31);
 
-    // 個別変更を先に集める
-    const modifications = new Map();
-    for (const key in data) {
-      const ev = data[key];
-      if (ev.type === 'VEVENT' && ev.recurrenceid) {
-        modifications.set(`${ev.uid}|${new Date(ev.recurrenceid).toISOString()}`, ev);
-      }
-    }
+    const inRange = rawEvents.filter(e => e.start && e.start.date >= rangeStart && e.start.date <= rangeEnd);
 
-    // 全VEVENTを展開
-    const flat = [];
-    for (const key in data) {
-      const ev = data[key];
-      if (ev.type !== 'VEVENT') continue;
-      if (ev.recurrenceid) continue;
+    // ---- 中間表現にマップ ----
+    const intermediate = inRange.map(e => {
+      const startDate = e.start.date;
+      const endDate = e.end ? e.end.date : null;
+      const allDay = e.start.allDay === true;
 
-      if (ev.rrule) {
-        flat.push(...expandRecurring(ev, rangeStart, rangeEnd, modifications));
-      } else {
-        if (!ev.start) continue;
-        if (ev.start < rangeStart || ev.start > rangeEnd) continue;
-        flat.push({
-          uid: ev.uid,
-          start: ev.start,
-          end: ev.end,
-          summary: ev.summary,
-          description: ev.description || '',
-          location: ev.location,
-          allDay: isAllDay(ev),
-        });
-      }
-    }
-
-    // 整形
-    const events = flat.map(e => {
-      const allDay = e.allDay === true;
-      const dateStr = toJSTDateStr(e.start);
-      const startTime = allDay ? null : toJSTTime(e.start);
-      // endTime が startTime と同じ（または未指定）なら null 扱い
-      // node-ical は DTEND 不在時に start と同じ値を end に入れるため
+      const dateStr = toJSTDateStr(startDate);
+      const startTime = allDay ? null : toJSTTime(startDate);
       let endTime = null;
-      if (e.end && !allDay && e.end.getTime() > e.start.getTime()) {
-        endTime = toJSTTime(e.end);
-        if (endTime === startTime) endTime = null; // 念のため二重チェック
+      if (endDate && !allDay && endDate.getTime() > startDate.getTime()) {
+        endTime = toJSTTime(endDate);
+        if (endTime === startTime) endTime = null;
       }
 
       const matchedCats = detectCategories(e.summary);
       const primary = pickPrimary(matchedCats);
       const featured = isFeatured(matchedCats, e.summary);
-
       const { cleanTitle, guests } = extractGuestAndCleanTitle(e.summary);
       const desc = parseDescription(e.description);
-
-      // 説明欄に Guest プロパティがあればそれも guests に追加
-      const guestProps = desc.properties.filter(p => p.label === 'ゲスト').map(p => p.value);
-      const allGuests = dedupe([...guests, ...guestProps]);
-
-      // 貸切表示
-      let displayTitle = cleanTitle || e.summary || '';
-      const isClosed = matchedCats.some(c => c.isStatus && c.id === 'closed');
-      if (isClosed && startTime) {
-        displayTitle = buildClosedDisplay(e, startTime, endTime, cleanTitle);
-      }
-
-      // 時刻表示
-      let timeLabel;
-      if (allDay) {
-        timeLabel = DISPLAY_CONFIG.timeDisplay?.allDay || '終日';
-      } else if (endTime && DISPLAY_CONFIG.timeDisplay?.showTimeRange) {
-        timeLabel = `${startTime}${DISPLAY_CONFIG.timeDisplay.rangeSeparator || '–'}${endTime}`;
-      } else if (startTime) {
-        timeLabel = `${startTime}〜`;
-      } else {
-        timeLabel = DISPLAY_CONFIG.timeDisplay?.tba || '時間未定';
-      }
+      const description = buildDescription(guests, desc.properties, desc.freeText) || undefined;
 
       return {
-        id: e.uid,
-        date: dateStr,
-        startTime,
-        endTime,
-        timeLabel,
-        allDay,
+        dateStr, startTime, endTime, allDay,
+        matchedCats, primary, featured,
+        cleanTitle, description,
         rawTitle: e.summary || '',
-        title: displayTitle,
-        cleanTitle,
-        categories: matchedCats.map(c => ({
-          id: c.id,
-          label: c.label,
-          labelEn: c.labelEn,
-          color: c.color,
-        })),
-        primaryCategory: primary ? {
-          id: primary.id,
-          label: primary.label,
-          labelEn: primary.labelEn,
-          color: primary.color,
-        } : null,
-        featured,
-        guests: allGuests,
-        properties: desc.properties,
-        descriptionFreeText: desc.freeText,
-        location: e.location || '代々木公園 BE STAGE 1F',
       };
     });
 
-    // 同日同タイトルの集約（複数ショータイム対応）
-    const groupKey = (ev) => `${ev.date}|${ev.cleanTitle}|${ev.primaryCategory?.id}`;
+    // ---- デザイン契約形式へ変換 + 複合分割 ----
+    const closedConf = DISPLAY_CONFIG.closedDisplay || {};
+    const timeConf = DISPLAY_CONFIG.timeDisplay || {};
+
+    const events = [];
+    for (const it of intermediate) {
+      const isClosed = it.matchedCats.some(c => c.isStatus && c.id === 'closed');
+
+      // (1) 貸切: title="貸切", times=["15:00–17:00"]
+      if (isClosed) {
+        let timeStr = '';
+        if (it.startTime && it.endTime) {
+          timeStr = (closedConf.rangeFormat || '{startTime}–{endTime}')
+            .replace('{startTime}', it.startTime).replace('{endTime}', it.endTime);
+        } else if (it.startTime) {
+          timeStr = (closedConf.noEndTimeFormat || '{startTime}〜').replace('{startTime}', it.startTime);
+        }
+        events.push({
+          date: it.dateStr,
+          type: 'closed',
+          title: closedConf.label || '貸切',
+          times: timeStr ? [timeStr] : [],
+          description: it.description,
+        });
+        continue;
+      }
+
+      // (2) featured + allDay: 時刻欄なし
+      const hideTime = timeConf.hideTimeForFeaturedAllDay && it.featured && it.allDay;
+      const baseTimes = hideTime ? [] : (it.allDay ? [] : (it.startTime ? [it.startTime] : []));
+
+      // (3) 複合カテゴリ分割 (5/11 MONDAY MUSIC × HULA SHOW など)
+      const segs = splitCompositeTitle(it.cleanTitle, it.matchedCats);
+      if (segs) {
+        for (const seg of segs) {
+          events.push({
+            date: it.dateStr,
+            type: seg.type,
+            title: seg.title,
+            times: baseTimes.slice(),
+            description: it.description,
+          });
+        }
+        continue;
+      }
+
+      // (4) 通常イベント
+      events.push({
+        date: it.dateStr,
+        type: it.primary ? it.primary.id : (CATEGORIES_CONFIG.fallbackCategoryId || 'hula'),
+        title: it.cleanTitle || it.rawTitle,
+        times: baseTimes,
+        description: it.description,
+      });
+    }
+
+    // ---- 同日同タイトル＋同 type の集約 (複数ショータイム対応) ----
+    const groupKey = (ev) => `${ev.date}|${ev.title}|${ev.type}`;
     const groups = new Map();
     for (const ev of events) {
       const k = groupKey(ev);
       if (!groups.has(k)) {
-        groups.set(k, { ...ev, times: ev.startTime ? [ev.startTime] : [], timeLabels: [ev.timeLabel] });
+        groups.set(k, { ...ev, times: ev.times.slice() });
       } else {
         const g = groups.get(k);
-        if (ev.startTime && !g.times.includes(ev.startTime)) g.times.push(ev.startTime);
-        if (!g.timeLabels.includes(ev.timeLabel)) g.timeLabels.push(ev.timeLabel);
+        for (const t of ev.times) if (!g.times.includes(t)) g.times.push(t);
+        // description: 最初のものを採用 (重複防止)
+        if (!g.description && ev.description) g.description = ev.description;
       }
     }
 
-    const merged = Array.from(groups.values())
-      .sort((a, b) => {
-        if (a.date !== b.date) return a.date.localeCompare(b.date);
-        return (a.startTime || '').localeCompare(b.startTime || '');
-      });
+    const merged = Array.from(groups.values()).sort((a, b) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      const ta = (a.times[0] || '');
+      const tb = (b.times[0] || '');
+      return ta.localeCompare(tb);
+    });
 
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.status(200).json({
+    return res.status(200).json({
       events: merged,
-      lastUpdated: new Date().toISOString(),
+      fetchedAt: new Date().toISOString(),
       count: merged.length,
-      meta: {
-        categoriesAvailable: CATEGORIES_CONFIG.categories.map(c => ({
-          id: c.id, label: c.label, color: c.color,
-        })),
-        timezone: 'Asia/Tokyo',
-      },
     });
   } catch (err) {
     console.error('Events API error:', err);
     res.setHeader('Cache-Control', 'no-store');
-    res.status(500).json({ error: err.message, events: [], lastUpdated: null });
+    return res.status(500).json({ error: err.message, events: [], fetchedAt: null });
   }
 };
-� UTC Date。こ�

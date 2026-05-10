@@ -1,5 +1,5 @@
 {
-  "_comment": "Tiki's Tokyo｜表示・���出ルール。タイトリ整形、ゲスデ抽出、説明欄パース、貸切表記など。",
+  "_comment": "Tiki's Tokyo｜表示・抽出ルール。タイトル整形、ゲスト抽出、説明欄パース、貸切・複合カテゴリ表記など。",
 
   "guestExtractor": {
     "_comment": "タイトルから ～ゲスト名～ や 〜ゲスト名〜 や (ゲスト名) を抽出して、ゲスト：〇〇形式に変換",
@@ -10,50 +10,49 @@
       { "regex": "\\((.+?)\\)\\s*$", "field": "guest" }
     ],
     "stripFromTitle": true,
-    "_stripComment": "true の時は抽出化の文字列をタイトルから除去する"
+    "guestPrefix": "ゲスト：",
+    "guestSeparator": " / ",
+    "_publicFacingComment": "一般のお客様向けに「ゲスト：」と表示する（Kawasaki要望）"
   },
 
   "descriptionParsers": {
     "_comment": "説明欄から「Key: Value」形式の情報を抽出。Notion-likeなプロパティとして扱う。",
     "fields": [
       { "keys": ["Guest", "ゲスト", "出演"], "label": "ゲスト" },
-      { "keys": ["Music Charge", "Charge", "チャージ", "ミュージックチャージ"], "label": "Music Charge", "format": "{value}" },
+      { "keys": ["Music Charge", "Charge", "チャージ", "ミュージックチャージ"], "label": "Music Charge" },
       { "keys": ["Entry", "Entry Fee", "入場料"], "label": "入場料" },
-      { "keys": ["予約", "Reservation", "Booking"], "label": "ご予約", "isLink": true },
+      { "keys": ["予約", "Reservation", "Booking"], "label": "ご予約" },
       { "keys": ["備考", "Note", "Notes"], "label": "備考" }
     ]
-  },{
+  },
+
+  "compositeSplitter": {
+    "_comment": "1つのイベントが複数カテゴリに該当する時 (5/11 MONDAY MUSIC × HULA SHOW)、タイトルを区切り文字で分割し、それぞれを別イベントとして出力。デザインの 1 event = 1 type 制約を保ったまま、カレンダー上で両方のカテゴリ色のピル/ドットを表示できる。",
+    "enabled": true,
+    "separators": ["×", "✕", " x ", " X "],
+    "_separatorsComment": "Kawasaki がタイトル中で複数カテゴリを並記する際の区切り文字"
+  },
 
   "closedDisplay": {
-    "_comment": "貸切・休業時の表記",
-    "format": "{startTime}–{endTime} {label}",
-    "labelFromTitle": true,
-    "_labelComment": "true の時はタイトルから絵文字を除いた文言を {label} に使う。falseなら固定文字列。",
+    "_comment": "貸切・休業時の表記。pill では times に時刻範囲、title に固定ラベル「貸切」を入れる。",
+    "label": "貸切",
     "fallbackLabel": "貸切",
-    "noEndTimeFormat": "{startTime}〜 {label}"
+    "rangeFormat": "{startTime}–{endTime}",
+    "noEndTimeFormat": "{startTime}〜"
   },
 
   "timeDisplay": {
-    "_comment": "時刻表示のルール",
-    "showTimeRange": true,
+    "_comment": "時刻表示。featured かつ 終日 のイベントは times を空にする(Kawasaki: 5/31 1周年は時刻記載なし)。",
     "rangeSeparator": "–",
-    "tba": "時間未定",
-    "allDay": "終日",
-    "tbaPatterns": ["TBA", "TBD", "未定"]
+    "hideTimeForFeaturedAllDay": true
   },
 
   "titleCleanup": {
-    "_comment": "タイトルから取り���くパターン（表示用）",
+    "_comment": "タイトルから取り除くパターン（表示用）",
     "stripEmojis": false,
     "stripPatterns": [
       "^[【\\[]\\s*",
       "\\s*[】\\]]$"
     ]
-  },
-
-  "compositeRules": {
-    "_comment": "複数カテゴリが揃った時の特別表示。今は空。将来「ハワイアンナイト」などを追加可能。",
-    "rules": []
   }
 }
-

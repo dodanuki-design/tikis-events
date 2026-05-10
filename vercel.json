@@ -1,8 +1,7 @@
 {
   "functions": {
     "api/events.js": {
-      "maxDuration": 10,
-      "includeFiles": "config/**"
+      "maxDuration": 10
     }
   }
 }
