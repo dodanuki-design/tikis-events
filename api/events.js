@@ -1,34 +1,433 @@
+// ============================================================
+// api/events.js
+// Google Calendar (iCal) → 構造化 JSON
+// 判定ロジックは config/categories.json と config/display.json から読み込み。
+// 1イベント複数カテゴリ対応 / 説明欄パース / 貸切時間範囲表示 等。
+// ============================================================
+const fs = require('fs');
+const path = require('path');
 const ical = require('node-ical');
-const COLOR_MAP = {'11':'hula','4':'hula','5':'tahitian','7':'workshop','10':'music','9':'yoga','8':'special','1':'special'};
-const TYPE_FROM_TITLE=(t)=>{const s=t.toLowerCase();if(s.includes('tahitian')||s.includes('タヒチ'))return'tahitian';if(s.includes('workshop')||s.includes('ワークショップ')||t.includes('🌸'))return'workshop';if(s.includes('hula')||s.includes('フラ'))return'hula';if(s.includes('yoga')||s.includes('ヨガ'))return'yoga';if(s.includes('live')||s.includes('music')||s.includes('ライブ')||s.includes('ミュージック'))return'music';if(s.includes('close')||s.includes('貸切')||s.includes('定休'))return'closed';return'special';};
-function toJST(d){if(!d)return null;return new Date(new Date(d).getTime()+9*3600000);}
-function fmtDate(d){return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');}
-function fmtTime(d){return String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0');}
-function expandRec(ev,s,e){const res=[];try{const R=require('rrule');const RR=R.RRule||(R.default&&R.default.RRule)||R;const ds=toJST(ev.start);const dur=ev.end?new Date(ev.end)-new Date(ev.start):3600000;let rs='';if(ev.rrule&&ev.rrule.toString)rs=ev.rrule.toString();else if(typeof ev.rrule==='string')rs=ev.rrule;if(!rs)return res;const rule=RR.fromString(rs.includes('DTSTART')?rs:'DTSTART:'+ds.toISOString().replace(/[-:]/g,'').replace('.000Z','Z')+'\n'+rs);const exs=(ev.exdate?Object.values(ev.exdate):[]).map(x=>fmtDate(toJST(x instanceof Date?x:x.val)));for(const d of rule.between(s,e,true)){const o=toJST(d);const dt=fmtDate(o);if(exs.includes(dt))continue;const cs=new Date(Date.UTC(o.getUTCFullYear(),o.getUTCMonth(),o.getUTCDate(),ds.getUTCHours(),ds.getUTCMinutes()));res.push({date:dt,startTime:fmtTime(cs),endTime:ev.end?fmtTime(new Date(+cs+dur)):null,isRecurring:true});}}catch(err){console.error(err.message);}return res;}
-module.exports=async(req,res)=>{
-  res.setHeader('Cache-Control','s-maxage=60,stale-while-revalidate=60');
-  res.setHeader('Access-Control-Allow-Origin','*');
-  const url=process.env.GCAL_ICAL_URL;
-  if(!url)return res.status(500).json({error:'GCAL_ICAL_URL not set'});
-  try{
-    const data=await require('node-ical').async.fromURL(url);
-    const now=new Date(),s=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()-1,1)),e=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()+3,0));
-    const evs=[];
-    for(const k of Object.keys(data)){
-      const ev=data[k];if(ev.type!=='VEVENT')continue;
-      const t=ev.summary||'';
-      const type=COLOR_MAP[ev.color||ev['x-apple-calendar-color']||'']||TYPE_FROM_TITLE(t);
-      const base={id:ev.uid||k,title:t.trim(),description:ev.description||'',type,featured:t.includes('周年'),location:ev.location||''};
-      if(ev.rrule){for(const o of expandRec(ev,s,e))evs.push(Object.assign({},base,o,{isRecurring:true}));}
-      else{const js=toJST(ev.start);if(!js)continue;const dt=fmtDate(js);if(new Date(dt)<s||new Date(dt)>e)continue;evs.push(Object.assign({},base,{date:dt,startTime:fmtTime(js),endTime:ev.end?fmtTime(toJST(ev.end)):null,isRecurring:false}));}
+
+// ----------- 設定ファイル読み込み（起動時1回） -----------
+function loadConfig(name) {
+  const tryPaths = [
+    path.join(process.cwd(), 'config', `${name}.json`),
+    path.join(__dirname, '..', 'config', `${name}.json`),
+    path.join(__dirname, 'config', `${name}.json`),
+  ];
+  for (const p of tryPaths) {
+    if (fs.existsSync(p)) {
+      return JSON.parse(fs.readFileSync(p, 'utf-8'));
     }
-    evs.sort((a,b)=>a.date!==b.date?a.date.localeCompare(b.date):(a.startTime||'').localeCompare(b.startTime||''));
-    const merged=[];
-    for(const ev of evs){
-      const ex=merged.find(m=>m.date===ev.date&&m.title===ev.title&&m.type===ev.type);
-      if(ex){if(!ex.times)ex.times=[ex.startTime];if(ev.startTime&&!ex.times.includes(ev.startTime))ex.times.push(ev.startTime);}
-      else merged.push(Object.assign({},ev,{times:ev.startTime?[ev.startTime]:[]}));
+  }
+  throw new Error(`Config file not found: ${name}.json (tried: ${tryPaths.join(', ')})`);
+}
+
+const CATEGORIES_CONFIG = loadConfig('categories');
+const DISPLAY_CONFIG = loadConfig('display');
+
+// ----------- 検出ヘルパー -----------
+function detectCategories(title) {
+  const matched = [];
+  const t = (title || '').trim();
+  if (!t) return matched;
+
+  for (const cat of CATEGORIES_CONFIG.categories) {
+    let matchType = null; // 'emoji' | 'keyword' | null
+
+    // 1. 絵文字マッチ（明示的な意図表現）
+    if (cat.emojis && cat.emojis.length) {
+      for (const emoji of cat.emojis) {
+        if (t.includes(emoji)) { matchType = 'emoji'; break; }
+      }
     }
-    res.status(200).json({events:merged,fetchedAt:new Date().toISOString(),count:merged.length});
-  }catch(err){res.status(500).json({error:err.message});}
+
+    // 2. キーワードマッチ（保険）。絵文字未マッチ時はみ。
+    if (!matchType && cat.keywords && cat.keywords.length) {
+      for (const kw of cat.keywords) {
+        if (t.includes(kw)) { matchType = 'keyword'; break; }
+      }
+    }
+
+    if (matchType) matched.push({ ...cat, matchType });
+  }
+
+  return matched;
+}
+
+function pickPrimary(categories) {
+  if (!categories.length) {
+    const fb = CATEGORIES_CONFIG.categories.find(c => c.id === CATEGORIES_CONFIG.fallbackCategoryId);
+    return fb || CATEGORIES_CONFIG.categories[0];
+  }
+  // 優先順位ルール:
+  //   1) emoji マッチを keyword より優先（明示的な意図 > 部分文字列の偶然一致）
+  //   2) 同じ matchType 内では priority の高い順
+  // 例: 「🌸 ワークショップ（カンナフラワー）」
+  //     - 🌸 → workshop (emoji) と 「フラ」→ hula_tahiti (keyword)
+  //     - emoji 優先で workshop が primary になる
+  return [...categories].sort((a, b) => {
+    if (a.matchType !== b.matchType) {
+      return a.matchType === 'emoji' ? -1 : 1;
+    }
+    return (b.priority || 0) - (a.priority || 0);
+  })[0];
+}
+
+function isFeatured(categories, title) {
+  // markFeatured カテゴリにマッチした、または special キーワード相当の場合
+  return categories.some(c => c.markFeatured) || /1\s*周年|Anniversary|🎉|🎊/i.test(title || '');
+}
+
+// ----------- タイトル・ゲスト整形 -----------
+function extractGuestAndCleanTitle(title) {
+  if (!title) return { cleanTitle: '', guests: [] };
+  let cleanTitle = title;
+  const guests = [];
+
+  const conf = DISPLAY_CONFIG.guestExtractor;
+  if (conf && conf.patterns) {
+    for (const p of conf.patterns) {
+      const re = new RegExp(p.regex, 'g');
+      let m;
+      while ((m = re.exec(title)) !== null) {
+        if (m[1]) {
+          guests.push(m[1].trim());
+        }
+      }
+      if (conf.stripFromTitle) {
+        cleanTitle = cleanTitle.replace(re, '').trim();
+      }
+    }
+  }
+
+  // 表示用の追加クリーンアップ
+  if (DISPLAY_CONFIG.titleCleanup && DISPLAY_CONFIG.titleCleanup.stripPatterns) {
+    for (const ptn of DISPLAY_CONFIG.titleCleanup.stripPatterns) {
+      cleanTitle = cleanTitle.replace(new RegExp(ptn, 'g'), '').trim();
+    }
+  }
+
+  // 余分な空白を圧縮
+  cleanTitle = cleanTitle.replace(/\s{2,}/g, ' ').trim();
+
+  return { cleanTitle, guests: dedupe(guests) };
+}
+
+function dedupe(arr) {
+  return Array.from(new Set(arr.filter(Boolean)));
+}
+
+// ----------- 説明欄パース -----------
+function parseDescription(desc) {
+  const result = { properties: [], freeText: '' };
+  if (!desc) return result;
+
+  const text = String(desc).replace(/\r\n/g, '\n').trim();
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const fieldDefs = (DISPLAY_CONFIG.descriptionParsers && DISPLAY_CONFIG.descriptionParsers.fields) || [];
+
+  const remainingLines = [];
+  for (const line of lines) {
+    const m = line.match(/^([^:：]+)[:：]\s*(.+)$/);
+    if (!m) {
+      remainingLines.push(line);
+      continue;
+    }
+    const key = m[1].trim();
+    const value = m[2].trim();
+    const def = fieldDefs.find(d => d.keys.some(k => k.toLowerCase() === key.toLowerCase()));
+    if (def) {
+      result.properties.push({
+        label: def.label,
+        value: value,
+        isLink: def.isLink || /^https?:\/\//.test(value),
+      });
+    } else {
+      // 未定義のKey:Value も保持（汎用性）
+      result.properties.push({
+        label: key,
+        value: value,
+        isLink: /^https?:\/\//.test(value),
+      });
+    }
+  }
+
+  result.freeText = remainingLines.join('\n').trim();
+  return result;
+}
+
+// ----------- 時刻処理 -----------
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+function toJSTDateStr(date) {
+  const d = new Date(date.getTime() + JST_OFFSET_MS);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function toJSTTime(date) {
+  const d = new Date(date.getTime() + JST_OFFSET_MS);
+  const h = String(d.getUTCHours()).padStart(2, '0');
+  const m = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+function isAllDay(ev) {
+  // node-ical では DATE 型（時刻なし）の DTSTART は datetype === 'date'
+  return ev.datetype === 'date' || ev.start?.dateOnly === true;
+}
+
+// ----------- 貸切表示 -----------
+function buildClosedDisplay(ev, startTime, endTime, cleanTitle) {
+  const conf = DISPLAY_CONFIG.closedDisplay || {};
+  const label = (conf.labelFromTitle && cleanTitle) ? cleanTitle : (conf.fallbackLabel || '貸切');
+  if (endTime) {
+    return (conf.format || '{startTime}–{endTime} {label}')
+      .replace('{startTime}', startTime)
+      .replace('{endTime}', endTime)
+      .replace('{label}', label);
+  }
+  return (conf.noEndTimeFormat || '{startTime}〜 {label}')
+    .replace('{startTime}', startTime)
+    .replace('{label}', label);
+}
+
+// ----------- iCal RRULE 展開（TZ補正付き） -----------
+function expandRecurring(ev, rangeStart, rangeEnd, modifications) {
+  const out = [];
+  let rawDates;
+  try {
+    rawDates = ev.rrule.between(rangeStart, rangeEnd, true);
+  } catch (e) {
+    console.warn('RRULE expand failed:', ev.summary, e.message);
+    return out;
+  }
+
+  // node-ical + rrule の TZ 整合バグ対策。
+  // ev.start は TZID を正しく解釈した UTC Date。これと rrule 出力との差から JST 時刻を抽出。
+  const evStartJST = new Date(ev.start.getTime() + JST_OFFSET_MS);
+  const hourJST = evStartJST.getUTCHours();
+  const minJST = evStartJST.getUTCMinutes();
+  const durationMs = ev.end ? (ev.end.getTime() - ev.start.getTime()) : 0;
+
+  for (const rawDate of rawDates) {
+    const rawJST = new Date(rawDate.getTime() + JST_OFFSET_MS);
+    const y = rawJST.getUTCFullYear();
+    const m = rawJST.getUTCMonth();
+    const d = rawJST.getUTCDate();
+    const start = new Date(Date.UTC(y, m, d, hourJST - 9, minJST));
+    const end = durationMs > 0 ? new Date(start.getTime() + durationMs) : null;
+
+    // EXDATE チェック
+    if (ev.exdate) {
+      const excluded = Object.values(ev.exdate).some(ex => {
+        const exJST = new Date(new Date(ex).getTime() + JST_OFFSET_MS);
+        return exJST.getUTCFullYear() === y
+            && exJST.getUTCMonth() === m
+            && exJST.getUTCDate() === d;
+      });
+      if (excluded) continue;
+    }
+
+    // 個別変更（recurrence-id）
+    const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    let mod = null;
+    for (const [modKey, modEv] of modifications.entries()) {
+      if (!modKey.startsWith(ev.uid + '|')) continue;
+      const recId = modKey.split('|')[1];
+      const recJST = new Date(new Date(recId).getTime() + JST_OFFSET_MS);
+      const recStr = `${recJST.getUTCFullYear()}-${String(recJST.getUTCMonth()+1).padStart(2,'0')}-${String(recJST.getUTCDate()).padStart(2,'0')}`;
+      if (recStr === dateStr) { mod = modEv; break; }
+    }
+
+    if (mod) {
+      out.push({
+        uid: ev.uid + '|' + dateStr,
+        start: mod.start,
+        end: mod.end,
+        summary: mod.summary || ev.summary,
+        description: mod.description || '',
+        location: mod.location || ev.location,
+      });
+    } else {
+      out.push({
+        uid: ev.uid + '|' + dateStr,
+        start: start,
+        end: end,
+        summary: ev.summary,
+        description: ev.description || '',
+        location: ev.location,
+      });
+    }
+  }
+
+  return out;
+}
+
+// ----------- メインハンドラ -----------
+module.exports = async (req, res) => {
+  const url = process.env.GCAL_ICAL_URL;
+  if (!url) {
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(500).json({ error: 'GCAL_ICAL_URL is not set', events: [] });
+  }
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Calendar fetch failed: ${response.status}`);
+    const icalText = await response.text();
+    const data = ical.parseICS(icalText);
+
+    // 範囲: 1か月前〜6か月先
+    const now = new Date();
+    const rangeStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const rangeEnd = new Date(now.getFullYear(), now.getMonth() + 6, 31);
+
+    // 個別変更を先に集める
+    const modifications = new Map();
+    for (const key in data) {
+      const ev = data[key];
+      if (ev.type === 'VEVENT' && ev.recurrenceid) {
+        modifications.set(`${ev.uid}|${new Date(ev.recurrenceid).toISOString()}`, ev);
+      }
+    }
+
+    // 全VEVENTを展開
+    const flat = [];
+    for (const key in data) {
+      const ev = data[key];
+      if (ev.type !== 'VEVENT') continue;
+      if (ev.recurrenceid) continue;
+
+      if (ev.rrule) {
+        flat.push(...expandRecurring(ev, rangeStart, rangeEnd, modifications));
+      } else {
+        if (!ev.start) continue;
+        if (ev.start < rangeStart || ev.start > rangeEnd) continue;
+        flat.push({
+          uid: ev.uid,
+          start: ev.start,
+          end: ev.end,
+          summary: ev.summary,
+          description: ev.description || '',
+          location: ev.location,
+          allDay: isAllDay(ev),
+        });
+      }
+    }
+
+    // 整形
+    const events = flat.map(e => {
+      const allDay = e.allDay === true;
+      const dateStr = toJSTDateStr(e.start);
+      const startTime = allDay ? null : toJSTTime(e.start);
+      // endTime が startTime と同じ（または未指定）なら null 扱い
+      // node-ical は DTEND 不在時に start と同じ値を end に入れるため
+      let endTime = null;
+      if (e.end && !allDay && e.end.getTime() > e.start.getTime()) {
+        endTime = toJSTTime(e.end);
+        if (endTime === startTime) endTime = null; // 念のため二重チェック
+      }
+
+      const matchedCats = detectCategories(e.summary);
+      const primary = pickPrimary(matchedCats);
+      const featured = isFeatured(matchedCats, e.summary);
+
+      const { cleanTitle, guests } = extractGuestAndCleanTitle(e.summary);
+      const desc = parseDescription(e.description);
+
+      // 説明欄に Guest プロパティがあればそれも guests に追加
+      const guestProps = desc.properties.filter(p => p.label === 'ゲスト').map(p => p.value);
+      const allGuests = dedupe([...guests, ...guestProps]);
+
+      // 貸切表示
+      let displayTitle = cleanTitle || e.summary || '';
+      const isClosed = matchedCats.some(c => c.isStatus && c.id === 'closed');
+      if (isClosed && startTime) {
+        displayTitle = buildClosedDisplay(e, startTime, endTime, cleanTitle);
+      }
+
+      // 時刻表示
+      let timeLabel;
+      if (allDay) {
+        timeLabel = DISPLAY_CONFIG.timeDisplay?.allDay || '終日';
+      } else if (endTime && DISPLAY_CONFIG.timeDisplay?.showTimeRange) {
+        timeLabel = `${startTime}${DISPLAY_CONFIG.timeDisplay.rangeSeparator || '–'}${endTime}`;
+      } else if (startTime) {
+        timeLabel = `${startTime}〜`;
+      } else {
+        timeLabel = DISPLAY_CONFIG.timeDisplay?.tba || '時間未定';
+      }
+
+      return {
+        id: e.uid,
+        date: dateStr,
+        startTime,
+        endTime,
+        timeLabel,
+        allDay,
+        rawTitle: e.summary || '',
+        title: displayTitle,
+        cleanTitle,
+        categories: matchedCats.map(c => ({
+          id: c.id,
+          label: c.label,
+          labelEn: c.labelEn,
+          color: c.color,
+        })),
+        primaryCategory: primary ? {
+          id: primary.id,
+          label: primary.label,
+          labelEn: primary.labelEn,
+          color: primary.color,
+        } : null,
+        featured,
+        guests: allGuests,
+        properties: desc.properties,
+        descriptionFreeText: desc.freeText,
+        location: e.location || '代々木公園 BE STAGE 1F',
+      };
+    });
+
+    // 同日同タイトルの集約（複数ショータイム対応）
+    const groupKey = (ev) => `${ev.date}|${ev.cleanTitle}|${ev.primaryCategory?.id}`;
+    const groups = new Map();
+    for (const ev of events) {
+      const k = groupKey(ev);
+      if (!groups.has(k)) {
+        groups.set(k, { ...ev, times: ev.startTime ? [ev.startTime] : [], timeLabels: [ev.timeLabel] });
+      } else {
+        const g = groups.get(k);
+        if (ev.startTime && !g.times.includes(ev.startTime)) g.times.push(ev.startTime);
+        if (!g.timeLabels.includes(ev.timeLabel)) g.timeLabels.push(ev.timeLabel);
+      }
+    }
+
+    const merged = Array.from(groups.values())
+      .sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return (a.startTime || '').localeCompare(b.startTime || '');
+      });
+
+    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.status(200).json({
+      events: merged,
+      lastUpdated: new Date().toISOString(),
+      count: merged.length,
+      meta: {
+        categoriesAvailable: CATEGORIES_CONFIG.categories.map(c => ({
+          id: c.id, label: c.label, color: c.color,
+        })),
+        timezone: 'Asia/Tokyo',
+      },
+    });
+  } catch (err) {
+    console.error('Events API error:', err);
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(500).json({ error: err.message, events: [], lastUpdated: null });
+  }
 };
