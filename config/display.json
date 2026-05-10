@@ -1,0 +1,59 @@
+{
+  "_comment": "Tiki's Tokyo｜表示・���出ルール。タイトリ整形、ゲスデ抽出、説明欄パース、貸切表記など。",
+
+  "guestExtractor": {
+    "_comment": "タイトルから ～ゲスト名～ や 〜ゲスト名〜 や (ゲスト名) を抽出して、ゲスト：〇〇形式に変換",
+    "patterns": [
+      { "regex": "～(.+?)～", "field": "guest" },
+      { "regex": "〜(.+?)〜", "field": "guest" },
+      { "regex": "~(.+?)~", "field": "guest" },
+      { "regex": "\\((.+?)\\)\\s*$", "field": "guest" }
+    ],
+    "stripFromTitle": true,
+    "_stripComment": "true の時は抽出化の文字列をタイトルから除去する"
+  },
+
+  "descriptionParsers": {
+    "_comment": "説明欄から「Key: Value」形式の情報を抽出。Notion-likeなプロパティとして扱う。",
+    "fields": [
+      { "keys": ["Guest", "ゲスト", "出演"], "label": "ゲスト" },
+      { "keys": ["Music Charge", "Charge", "チャージ", "ミュージックチャージ"], "label": "Music Charge", "format": "{value}" },
+      { "keys": ["Entry", "Entry Fee", "入場料"], "label": "入場料" },
+      { "keys": ["予約", "Reservation", "Booking"], "label": "ご予約", "isLink": true },
+      { "keys": ["備考", "Note", "Notes"], "label": "備考" }
+    ]
+  },{
+
+  "closedDisplay": {
+    "_comment": "貸切・休業時の表記",
+    "format": "{startTime}–{endTime} {label}",
+    "labelFromTitle": true,
+    "_labelComment": "true の時はタイトルから絵文字を除いた文言を {label} に使う。falseなら固定文字列。",
+    "fallbackLabel": "貸切",
+    "noEndTimeFormat": "{startTime}〜 {label}"
+  },
+
+  "timeDisplay": {
+    "_comment": "時刻表示のルール",
+    "showTimeRange": true,
+    "rangeSeparator": "–",
+    "tba": "時間未定",
+    "allDay": "終日",
+    "tbaPatterns": ["TBA", "TBD", "未定"]
+  },
+
+  "titleCleanup": {
+    "_comment": "タイトルから取り���くパターン（表示用）",
+    "stripEmojis": false,
+    "stripPatterns": [
+      "^[【\\[]\\s*",
+      "\\s*[】\\]]$"
+    ]
+  },
+
+  "compositeRules": {
+    "_comment": "複数カテゴリが揃った時の特別表示。今は空。将来「ハワイアンナイト」などを追加可能。",
+    "rules": []
+  }
+}
+
