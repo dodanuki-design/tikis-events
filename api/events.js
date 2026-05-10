@@ -6,9 +6,18 @@
 // ============================================================
 const fs = require('fs');
 const path = require('path');
-const ical = require('node-ical');
 
-// ----------- 設定ファイル読み込み（起動時1回） -----------
+// node-ical のロード失敗を捕捉（モジュールレベルのクラッシュ → FUNCTION_INVOCATION_FAILED を防ぐ）
+let ical, _icalError;
+try {
+  ical = require('node-ical');
+} catch (e) {
+  _icalError = e;
+}
+
+// ----------- 設定ファイル読み込み（初回ハンドラ呼び出し時にキャッシュ） -----------
+let CATEGORIES_CONFIG, DISPLAY_CONFIG, _initError;
+
 function loadConfig(name) {
   const tryPaths = [
     path.join(process.cwd(), 'config', `${name}.json`),
@@ -20,11 +29,21 @@ function loadConfig(name) {
       return JSON.parse(fs.readFileSync(p, 'utf-8'));
     }
   }
-  throw new Error(`Config file not found: ${name}.json (tried: ${tryPaths.join(', ')})`);
+  throw new Error(`Config not found: ${name}.json (tried: ${tryPaths.join(', ')})`);
 }
 
-const CATEGORIES_CONFIG = loadConfig('categories');
-const DISPLAY_CONFIG = loadConfig('display');
+function ensureConfig() {
+  if (CATEGORIES_CONFIG && DISPLAY_CONFIG) return null;
+  if (_initError) return _initError;
+  try {
+    CATEGORIES_CONFIG = loadConfig('categories');
+    DISPLAY_CONFIG = loadConfig('display');
+    return null;
+  } catch (e) {
+    _initError = e;
+    return e;
+  }
+}
 
 // ----------- 検出ヘルパー -----------
 function detectCategories(title) {
@@ -42,7 +61,7 @@ function detectCategories(title) {
       }
     }
 
-    // 2. キーワードマッチ（保険）。絵文字未マッチ時のみ。
+    // 2. キーワードマッチ後保険（保険時のみ。
     if (!matchType && cat.keywords && cat.keywords.length) {
       for (const kw of cat.keywords) {
         if (t.includes(kw)) { matchType = 'keyword'; break; }
@@ -195,7 +214,7 @@ function buildClosedDisplay(ev, startTime, endTime, cleanTitle) {
     .replace('{label}', label);
 }
 
-// ----------- iCal RRULE 展開（TZ補正付ぎ） -----------
+// ----------- iCal RRULE 展開（TZ補正付き） -----------
 function expandRecurring(ev, rangeStart, rangeEnd, modifications) {
   const out = [];
   let rawDates;
@@ -269,6 +288,20 @@ function expandRecurring(ev, rangeStart, rangeEnd, modifications) {
 
 // ----------- メインハンドラ -----------
 module.exports = async (req, res) => {
+  // モジュール初期化エラーを JSON で返す（FUNCTION_INVOCATION_FAILED 防止）
+  if (_icalError) {
+    return res.status(500).json({ error: 'node-ical load failed: ' + _icalError.message, events: [] });
+  }
+  const configErr = ensureConfig();
+  if (configErr) {
+    return res.status(500).json({
+      error: 'Config load failed: ' + configErr.message,
+      cwd: process.cwd(),
+      dirname: __dirname,
+      events: [],
+    });
+  }
+
   const url = process.env.GCAL_ICAL_URL;
   if (!url) {
     res.setHeader('Cache-Control', 'no-store');
@@ -431,3 +464,4 @@ module.exports = async (req, res) => {
     res.status(500).json({ error: err.message, events: [], lastUpdated: null });
   }
 };
+� UTC Date。こ�
