@@ -1,9 +1,12 @@
 {
   "name": "tikis-events",
-  "version": "1.0.0",
-  "description": "Tiki's Tokyo event calendar",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Tiki's Tokyo - Live event calendar with config-driven categorization",
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
-    "node-ical": "^0.16.0",
-    "rrule": "^2.7.2"
+    "node-ical": "^0.18.0"
   }
 }
