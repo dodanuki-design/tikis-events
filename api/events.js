@@ -42,7 +42,7 @@ function detectCategories(title) {
       }
     }
 
-    // 2. キーワードマッチ（保険）。絵文字未マッチ時はみ。
+    // 2. キーワードマッチ（保険）。絵文字未マッチ時のみ。
     if (!matchType && cat.keywords && cat.keywords.length) {
       for (const kw of cat.keywords) {
         if (t.includes(kw)) { matchType = 'keyword'; break; }
@@ -195,7 +195,7 @@ function buildClosedDisplay(ev, startTime, endTime, cleanTitle) {
     .replace('{label}', label);
 }
 
-// ----------- iCal RRULE 展開（TZ補正付き） -----------
+// ----------- iCal RRULE 展開（TZ補正付ぎ） -----------
 function expandRecurring(ev, rangeStart, rangeEnd, modifications) {
   const out = [];
   let rawDates;
