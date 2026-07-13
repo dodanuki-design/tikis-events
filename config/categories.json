@@ -15,12 +15,12 @@
     },
     {
       "id": "no_reserve",
-      "label": "ご予約受付停止中",
+      "label": "ご予約停止中",
       "priority": 190,
       "emojis": ["✋"],
       "keywords": ["予約不可", "予約停止", "予約受付停止"],
       "isStatus": true,
-      "statusLabel": "ご予約受付停止中",
+      "statusLabel": "ご予約停止中",
       "_comment": "情報未解禁の特別企画期間などに使用。理由を出さず予約停止のみ告知。複数日の終日イベントで期間指定可"
     },
     {
