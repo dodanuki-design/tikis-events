@@ -765,7 +765,8 @@ function makeCell(day, dateStr, otherMonth, isToday = false) {
   if (dow === 6) cell.classList.add('saturday');
 
   const events = eventsForDate(dateStr);
-  if (events.some(e => e.type === 'closed' || e.type === 'no_reserve'))  cell.classList.add('closed');
+  // 斜線マスは closed のみ。no_reserve は営業中のため通常マスのまま注記だけ表示
+  if (events.some(e => e.type === 'closed'))  cell.classList.add('closed');
 
   const dateEl = document.createElement('div');
   dateEl.className = 'cell-date';
