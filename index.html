@@ -326,6 +326,7 @@ body {
 .event-pill.workshop { color: var(--gold); }
 .event-pill.special  { color: var(--brown); }
 .event-pill.closed   { color: var(--ink-lt); }
+.event-pill.no_reserve { color: var(--ink-lt); }
 .event-pill.more     { color: var(--ink-lt); border-left-color: var(--rule); }
 
 @media (max-width: 600px) {
@@ -345,6 +346,7 @@ body {
   .dot.workshop { background: var(--gold); }
   .dot.special  { background: var(--brown); }
   .dot.closed   { background: var(--rule); }
+  .dot.no_reserve { background: var(--rule); }
 }
 @media (min-width: 601px) { .dot-row { display: none; } }
 
@@ -638,6 +640,7 @@ const TYPE_META = {
   yoga:     { label: 'Yoga'         },
   special:  { label: 'Special'      },
   closed:   { label: 'Closed'       },
+  no_reserve: { label: ''           },  // 情報未解禁期間用: 英語ラベルは出さない
 };
 
 const MONTHS_JA = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
@@ -762,7 +765,7 @@ function makeCell(day, dateStr, otherMonth, isToday = false) {
   if (dow === 6) cell.classList.add('saturday');
 
   const events = eventsForDate(dateStr);
-  if (events.some(e => e.type === 'closed'))  cell.classList.add('closed');
+  if (events.some(e => e.type === 'closed' || e.type === 'no_reserve'))  cell.classList.add('closed');
 
   const dateEl = document.createElement('div');
   dateEl.className = 'cell-date';

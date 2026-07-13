@@ -243,6 +243,30 @@ function splitCompositeTitle(cleanTitle, matchedCats) {
   return segs.length >= 2 ? segs : null;
 }
 
+// ---------- 複数日イベントの展開 ----------
+// 終日イベントが複数日にまたがる場合（例: 予約停止期間 7/20〜7/25）、日ごとの
+// イベントに分割して各日のマスに表示させる。iCal の DTEND は排他的
+// （7/20〜7/25 の予定は DTEND=7/26）なので span がそのまま日数になる。
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MULTI_DAY_CAP = 92; // 3か月上限（入力ミスによる無限展開ガード）
+
+function expandMultiDay(e) {
+  if (!e.start || !e.start.allDay || !e.end || !e.end.allDay) return [e];
+  const span = Math.round((e.end.date.getTime() - e.start.date.getTime()) / DAY_MS);
+  if (span <= 1) return [e];
+  const out = [];
+  const days = Math.min(span, MULTI_DAY_CAP);
+  for (let i = 0; i < days; i++) {
+    const d = new Date(e.start.date.getTime() + i * DAY_MS);
+    out.push({
+      ...e,
+      start: { date: d, allDay: true },
+      end: { date: new Date(d.getTime() + DAY_MS), allDay: true },
+    });
+  }
+  return out;
+}
+
 // ---------- JST 時刻ヘルパ ----------
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 function toJSTDateStr(date) {
@@ -273,7 +297,10 @@ module.exports = async (req, res) => {
     const rangeStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const rangeEnd = new Date(now.getFullYear(), now.getMonth() + 6, 31);
 
-    const inRange = rawEvents.filter(e => e.start && e.start.date >= rangeStart && e.start.date <= rangeEnd);
+    // 複数日イベントを日ごとに展開してから範囲フィルタ
+    // （範囲開始前に始まり範囲内まで続く期間イベントを取りこぼさないため、展開が先）
+    const expanded = rawEvents.flatMap(expandMultiDay);
+    const inRange = expanded.filter(e => e.start && e.start.date >= rangeStart && e.start.date <= rangeEnd);
 
     // ---- 中間表現にマップ ----
     const intermediate = inRange.map(e => {
@@ -310,10 +337,10 @@ module.exports = async (req, res) => {
 
     const events = [];
     for (const it of intermediate) {
-      const isClosed = it.matchedCats.some(c => c.isStatus && c.id === 'closed');
-
-      // (1) 貸切: title="貸切", times=["15:00–17:00"]
-      if (isClosed) {
+      // (1) ステータス系（貸切 / ご予約受付停止中 など isStatus: true のカテゴリ）
+      // タイトル行 = statusLabel 固定文言、時刻行 = 範囲。終日なら時刻なし。
+      const statusCat = it.matchedCats.find(c => c.isStatus);
+      if (statusCat) {
         let timeStr = '';
         if (it.startTime && it.endTime) {
           timeStr = (closedConf.rangeFormat || '{startTime}–{endTime}')
@@ -323,8 +350,8 @@ module.exports = async (req, res) => {
         }
         events.push({
           date: it.dateStr,
-          type: 'closed',
-          title: closedConf.label || '貸切',
+          type: statusCat.id,
+          title: statusCat.statusLabel || closedConf.label || '貸切',
           times: timeStr ? [timeStr] : [],
           description: it.description,
         });
